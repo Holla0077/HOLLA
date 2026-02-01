@@ -1,0 +1,43 @@
+name: AI Issue → PR (Codex)
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  codex_issue_to_pr:
+    if: github.event.label.name == 'ai-pr'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Codex - implement issue and open PR
+        uses: openai/codex-action@v1
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          prompt: |
+            You are an engineering agent working in this repository.
+
+            Implement the GitHub Issue below as a small, focused PR.
+
+            Issue title: ${{ github.event.issue.title }}
+            Issue body:
+            ${{ github.event.issue.body }}
+
+            Constraints:
+            - Follow AGENTS.md
+            - Do not touch production secrets
+            - Add tests OR provide a clear verification checklist
+            - Open a PR that references the issue number
