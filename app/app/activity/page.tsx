@@ -44,6 +44,32 @@ function safeString(v: unknown) {
   }
 }
 
+function formatAmount(amountStr: string, asset: string) {
+  if (asset === "GHS") {
+    try {
+      const n = BigInt(amountStr);
+      const sign = n < 0n ? "-" : "";
+      const abs = n < 0n ? -n : n;
+      const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      const frac = (abs % 100n).toString().padStart(2, "0");
+      return `${sign}GH\u20b5 ${whole}.${frac}`;
+    } catch {
+      return `GH\u20b5 0.00`;
+    }
+  }
+  // Crypto: stored in satoshi-like minor units (×1e8)
+  try {
+    const n = BigInt(amountStr);
+    const sign = n < 0n ? "-" : "";
+    const abs = n < 0n ? -n : n;
+    const whole = abs / 100000000n;
+    const frac = (abs % 100000000n).toString().padStart(8, "0").replace(/0+$/, "") || "0";
+    return `${sign}${whole}.${frac} ${asset}`;
+  } catch {
+    return `${amountStr} ${asset}`;
+  }
+}
+
 export default function ActivityPage() {
   const [txs, setTxs] = useState<UiTx[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,7 +245,7 @@ export default function ActivityPage() {
                     </span>
                   </div>
 
-                  <div className="text-right text-[13px] font-semibold text-white">{t.amount}</div>
+                  <div className="text-right text-[13px] font-semibold text-white">{formatAmount(t.amount, t.asset)}</div>
                 </div>
               </button>
             ))}
@@ -272,12 +298,12 @@ export default function ActivityPage() {
 
                 <div className="rounded-[14px] border border-slate-200/15 bg-transparent px-4 py-3">
                   <div className="text-[12px] text-slate-200/70">Amount</div>
-                  <div className="mt-2 text-[13px] font-semibold text-white">{selected.amount}</div>
+                  <div className="mt-2 text-[13px] font-semibold text-white">{formatAmount(selected.amount, selected.asset)}</div>
                 </div>
 
                 <div className="rounded-[14px] border border-slate-200/15 bg-transparent px-4 py-3">
                   <div className="text-[12px] text-slate-200/70">Fees</div>
-                  <div className="mt-2 text-[13px] font-semibold text-white">{selected.feeTotal}</div>
+                  <div className="mt-2 text-[13px] font-semibold text-white">{formatAmount(selected.feeTotal, selected.asset)}</div>
                 </div>
 
                 <div className="rounded-[14px] border border-slate-200/15 bg-transparent px-4 py-3">

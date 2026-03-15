@@ -12,7 +12,7 @@ type SupportTopic =
   | "SECURITY"
   | "BUG";
 
-const SUPPORT_EMAIL = "support@thevault.com"; // change to your real support email
+const SUPPORT_EMAIL = "support@holla.app";
 
 function buildMailto(opts: {
   to: string;
@@ -41,11 +41,10 @@ export default function HelpPage() {
   };
 
   const emailSubject = useMemo(() => {
-    return `THE VAULT Support — ${topicLabel[topic]}`;
+    return `HOLLA Support — ${topicLabel[topic]}`;
   }, [topic]);
 
   const emailBody = useMemo(() => {
-    // Keep it short but structured for support.
     const lines = [
       `Topic: ${topicLabel[topic]}`,
       "",
@@ -60,7 +59,7 @@ export default function HelpPage() {
       "- Transaction ID (if any):",
       "- Screenshot (attach if possible):",
       "",
-      "Sent from THE VAULT web app.",
+      "Sent from HOLLA web app.",
     ];
     return lines.join("\n");
   }, [topic, message]);

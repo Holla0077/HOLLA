@@ -1,0 +1,80 @@
+Continue building on this existing HOLLA codebase. Do NOT start from scratch.
+
+This is an in-progress fintech web app built with Next.js App Router, TypeScript, Tailwind CSS, Prisma, and PostgreSQL.
+
+Critical instructions:
+- First inspect the existing codebase and understand what is already implemented.
+- Preserve the existing design system, layout, theme, and branding.
+- Do not replace working code unnecessarily.
+- Do not redesign the UI from scratch.
+- Reuse the existing header, sidebar, pages, logo component, spacing, and styling patterns.
+- Preserve the current blue-black background and emerald accent color theme.
+- Treat this as a continuation of an existing professional fintech dashboard, not a new demo app.
+
+Before making changes, review these files first:
+- app/app/layout.tsx
+- app/api/me/route.ts
+- app/api/transactions/route.ts
+- app/api/wallets/route.ts
+- app/api/login/route.ts
+- app/api/signup/route.ts
+- app/api/logout/route.ts
+- prisma/schema.prisma
+- lib/prisma.ts
+- lib/auth.ts
+- lib/session.ts
+- global styling/theme files
+- all components related to settings, dashboard, wallets, and transactions
+
+What the app is supposed to be:
+- HOLLA is a real-account fintech/payments app, not a demo.
+- It should have a professional wallet/payments dashboard similar in flow to Rarebl, but using the existing HOLLA branding and theme.
+- Users must complete profile and be verified before they can transact.
+- Transactions should be handled through /api/transactions, not separate /api/send.
+- Receive and Top Up are the same inbound flow.
+- Send, Top Up, Swap, and P2P should all build on the existing transaction architecture.
+
+Current product rules:
+1. Users can sign up and log in.
+2. Users can complete profile in Settings.
+3. Users should not be allowed to transact unless:
+   - fullName exists
+   - account is verified
+4. Verification state must be stored in the database.
+5. Wallets and transactions must use the existing Prisma schema and current route structure.
+
+Your first task:
+Inspect the existing codebase and summarize:
+1. what is already working
+2. what is broken
+3. what is missing
+4. what should be built next in the safest order
+
+Then implement the next steps without rewriting the whole app.
+
+Priority implementation order:
+1. Fix and complete app/api/me/route.ts so profile load and save work correctly
+2. Ensure the Settings page reads/writes fullName, gender, dateOfBirth, and verification state correctly
+3. Add transaction blocking logic so unverified users cannot send/top up/swap/p2p
+4. Extend app/api/transactions/route.ts to support POST transaction creation using the existing Prisma models
+5. Connect dashboard and wallets pages to real backend data
+6. Make transactions list render from /api/transactions
+7. Preserve current theme and UI styling throughout
+
+Important backend requirements:
+- Use Prisma only
+- Use Zod validation
+- Keep JWT cookie auth with holla_session
+- Use the existing schema structure
+- Do not invent a completely new architecture
+- If a schema change is required, update prisma/schema.prisma carefully and keep it compatible with existing models
+
+Important frontend requirements:
+- Preserve current theme and layout proportions
+- Maintain current header and sidebar structure
+- Do not change branding colors
+- Keep the dashboard professional and clean
+
+Do not remove existing files unless absolutely necessary.
+Do not generate mock/demo data unless a page would otherwise break.
+Prefer incremental completion over full rewrites.

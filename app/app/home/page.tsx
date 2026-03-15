@@ -372,7 +372,7 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                 <div className="rounded-[14px] border border-slate-200/40 px-3 py-3">
                   <div className="text-[13px] text-slate-200/80">USD balance</div>
                   <div className="mt-1.5 text-[18px] font-semibold text-white">
-                    ${(Number(selected.balance || "0") / USD_GHS_RATE).toFixed(2)}
+                    ${(Number(selected.balance || "0") / 100 / USD_GHS_RATE).toFixed(2)}
                   </div>
                   <div className="mt-2 text-[12px] text-slate-200/70">
                     Rate 1 USD = {USD_GHS_RATE.toFixed(2)} GH₵

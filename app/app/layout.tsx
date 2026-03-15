@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import HollaLogo from "@/public/brand/components/HollaLogo";
 
 const HEADER_H = 92; // compact but matches sketch proportions
@@ -103,6 +103,27 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const mode = (sp.get("mode") || "cash").toLowerCase() === "crypto" ? "crypto" : "cash";
 
+  const [userInitials, setUserInitials] = useState("ME");
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (!d?.user) return;
+        const u = d.user;
+        if (u.fullName) {
+          const parts = (u.fullName as string).trim().split(/\s+/);
+          const initials = parts.length >= 2
+            ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+            : parts[0].slice(0, 2).toUpperCase();
+          setUserInitials(initials);
+        } else if (u.username) {
+          setUserInitials((u.username as string).slice(0, 2).toUpperCase());
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   async function handleLogout() {
     try {
       await fetch("/api/logout", { method: "POST" });
@@ -188,7 +209,7 @@ const toggleBase =
                   className="h-10 w-10 rounded-full bg-slate-900/40 flex items-center justify-center text-sm font-semibold text-emerald-300 border border-slate-200/20"
                   title="Account"
                 >
-                  USER
+                  {userInitials}
                 </button>
 
                 <div className="invisible opacity-0 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 transition-all absolute right-0 mt-3 w-48 rounded-2xl border border-slate-200/15 bg-[#070B1A] shadow-xl p-2">

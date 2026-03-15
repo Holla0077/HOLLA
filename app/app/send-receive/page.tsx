@@ -39,6 +39,12 @@ const RECEIVE_ADDRESS: Record<string, string> = {
 
 type Tab = "SEND" | "RECEIVE";
 
+type MeUser = {
+  username?: string | null;
+  email?: string | null;
+  phone?: string | null;
+};
+
 export default function SendReceivePage() {
   const sp = useSearchParams();
   const mode = (sp.get("mode") || "cash").toLowerCase() === "crypto" ? "crypto" : "cash";
@@ -65,6 +71,17 @@ export default function SendReceivePage() {
 
   // Receive copy feedback
   const [copied, setCopied] = useState(false);
+
+  // Real user data for receive section
+  const [meUser, setMeUser] = useState<MeUser | null>(null);
+
+  // Load real user data for the Receive panel
+  useEffect(() => {
+    fetch("/api/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.user) setMeUser(d.user as MeUser); })
+      .catch(() => {});
+  }, []);
 
   // Load wallets
   useEffect(() => {
@@ -150,16 +167,24 @@ export default function SendReceivePage() {
 
     setSendBusy(true);
     try {
-      const res = await fetch("/api/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletId: selected.id,
-          amount: sendAmount,
-          to: isFiat(selected.code) ? sendTo : undefined,
-          address: !isFiat(selected.code) ? sendAddress : undefined,
-        }),
-      });
+      let res: Response;
+      if (isFiat(selected.code)) {
+        // GHS: Holla-to-Holla internal transfer
+        res = await fetch("/api/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientIdentifier: sendTo.trim(),
+            assetCode: selected.code,
+            amount: sendAmount,
+          }),
+        });
+      } else {
+        // Crypto: external chain send (not yet live — show clear message)
+        setSendError("On-chain crypto sends are not yet available. Contact support for assistance.");
+        setSendBusy(false);
+        return;
+      }
 
       const ct = res.headers.get("content-type") || "";
       const data = ct.includes("application/json") ? await res.json() : { error: await res.text() };
@@ -169,10 +194,20 @@ export default function SendReceivePage() {
         return;
       }
 
-      setSendOk("Sent successfully.");
+      setSendOk(`Sent successfully. Transaction ID: ${data.transactionId}`);
       setSendAmount("");
       setSendTo("");
       setSendAddress("");
+      // Refresh wallet balances
+      const wr = await fetch("/api/wallets");
+      const wd = await wr.json();
+      if (Array.isArray(wd.wallets)) {
+        const visible =
+          mode === "cash"
+            ? wd.wallets.filter((w: UiWallet) => w.type === "FIAT" || w.code === "GHS")
+            : wd.wallets.filter((w: UiWallet) => w.type === "CRYPTO" && w.code !== "GHS");
+        setWallets(visible);
+      }
     } catch (e: unknown) {
       setSendError(getErrorMessage(e));
     } finally {
@@ -188,13 +223,12 @@ export default function SendReceivePage() {
    * NOTE: Replace username/email/phone with real values once you add /api/me endpoint.
    */
   const userDetails = useMemo(() => {
-    // placeholders until /api/me exists
     return {
-      username: "your_username",
-      email: "you@example.com",
-      phone: "+233XXXXXXXXX",
+      username: meUser?.username || "—",
+      email: meUser?.email || "—",
+      phone: meUser?.phone || "—",
     };
-  }, []);
+  }, [meUser]);
 
   const receiveAddress = useMemo(() => {
     if (!selected) return "";
