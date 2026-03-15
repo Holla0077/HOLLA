@@ -1,7 +1,6 @@
 "use client";
 
-type ApiErrorResponse = { error?: string };
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 type MeResponse = {
   user: {
@@ -10,7 +9,7 @@ type MeResponse = {
     username?: string | null;
     email?: string | null;
     gender?: string | null;
-    dob?: string | null; // YYYY-MM-DD
+    dob?: string | null;
     verified?: boolean;
   };
   phones: { id: string; number: string; verified: boolean }[];
@@ -36,23 +35,19 @@ export default function SettingsPage() {
 
   const [me, setMe] = useState<MeResponse | null>(null);
 
-  // Editable fields
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [gender, setGender] = useState("");
   const [dob, setDob] = useState("");
 
-  // Save feedback
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState<string | null>(null);
 
-  // Phones
   const [phoneNew, setPhoneNew] = useState("");
   const [phoneBusy, setPhoneBusy] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
-  // Password
   const [pwBusy, setPwBusy] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwOk, setPwOk] = useState<string | null>(null);
@@ -60,46 +55,41 @@ export default function SettingsPage() {
   const [pwNext, setPwNext] = useState("");
   const [pwNext2, setPwNext2] = useState("");
 
-  // Load profile
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setLoadError(null);
+  const loadProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      setLoadError(null);
 
-        const res = await fetch("/api/me");
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) {
-          // API not implemented yet -> show nice empty state
-          if (!alive) return;
-          setMe(null);
-          return;
-        }
-        const data: MeResponse = await res.json();
-const err = (data as ApiErrorResponse)?.error;
-throw new Error(err || "Failed to load profile");
-
-        if (!alive) return;
-        setMe(data);
-
-        setFullName(data.user.fullName || "");
-        setUsername(data.user.username || "");
-        setGender(data.user.gender || "");
-        setDob(data.user.dob || "");
-      } catch (e) {
-        if (!alive) return;
-        setLoadError(getErrorMessage(e));
-      } finally {
-        if (!alive) return;
-        setLoading(false);
+      const res = await fetch("/api/me");
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        setMe(null);
+        return;
       }
-    })();
 
-    return () => {
-      alive = false;
-    };
+      const data = await res.json();
+
+      if (!res.ok) {
+        setLoadError(data?.error || "Failed to load profile");
+        return;
+      }
+
+      const profile = data as MeResponse;
+      setMe(profile);
+      setFullName(profile.user.fullName || "");
+      setUsername(profile.user.username || "");
+      setGender(profile.user.gender || "");
+      setDob(profile.user.dob || "");
+    } catch (e) {
+      setLoadError(getErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const phones = useMemo(() => me?.phones || [], [me]);
 
@@ -115,7 +105,6 @@ throw new Error(err || "Failed to load profile");
     setSaveOk(null);
 
     try {
-      // UI validation
       if (username.trim().length < 3) {
         setSaveError("Username must be at least 3 characters.");
         return;
@@ -140,14 +129,8 @@ throw new Error(err || "Failed to load profile");
         return;
       }
 
-      setSaveOk("Saved.");
-      // refresh
-      const r2 = await fetch("/api/me");
-      const ct2 = r2.headers.get("content-type") || "";
-      if (ct2.includes("application/json")) {
-        const data2: MeResponse = await r2.json();
-        setMe(data2);
-      }
+      setSaveOk("Saved successfully.");
+      await loadProfile();
     } catch (e) {
       setSaveError(getErrorMessage(e));
     } finally {
@@ -174,44 +157,12 @@ throw new Error(err || "Failed to load profile");
       const ct = res.headers.get("content-type") || "";
       const data = ct.includes("application/json") ? await res.json() : { error: await res.text() };
       if (!res.ok) {
-        setPhoneError(data?.error || "Failed to add phone");
+        setPhoneError(data?.error || "Failed to update phone");
         return;
       }
 
       setPhoneNew("");
-      // refresh
-      const r2 = await fetch("/api/me");
-      const ct2 = r2.headers.get("content-type") || "";
-      if (ct2.includes("application/json")) {
-        const data2: MeResponse = await r2.json();
-        setMe(data2);
-      }
-    } catch (e) {
-      setPhoneError(getErrorMessage(e));
-    } finally {
-      setPhoneBusy(false);
-    }
-  }
-
-  async function removePhone(id: string) {
-    setPhoneBusy(true);
-    setPhoneError(null);
-
-    try {
-      const res = await fetch(`/api/me/phones?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      const ct = res.headers.get("content-type") || "";
-      const data = ct.includes("application/json") ? await res.json() : { error: await res.text() };
-      if (!res.ok) {
-        setPhoneError(data?.error || "Failed to remove phone");
-        return;
-      }
-
-      const r2 = await fetch("/api/me");
-      const ct2 = r2.headers.get("content-type") || "";
-      if (ct2.includes("application/json")) {
-        const data2: MeResponse = await r2.json();
-        setMe(data2);
-      }
+      await loadProfile();
     } catch (e) {
       setPhoneError(getErrorMessage(e));
     } finally {
@@ -251,7 +202,7 @@ throw new Error(err || "Failed to load profile");
         return;
       }
 
-      setPwOk("Password updated.");
+      setPwOk("Password updated successfully.");
       setPwCurrent("");
       setPwNext("");
       setPwNext2("");
@@ -264,7 +215,6 @@ throw new Error(err || "Failed to load profile");
 
   return (
     <div className="max-w-[980px]">
-      {/* Header */}
       <div className="mb-6">
         <div className="text-[28px] font-semibold text-white" style={{ fontFamily: "serif" }}>
           Settings
@@ -274,7 +224,6 @@ throw new Error(err || "Failed to load profile");
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-10 border-b border-slate-200/20 pb-3">
         {(["PERSONAL", "SECURITY"] as const).map((t) => {
           const active = tab === t;
@@ -301,29 +250,23 @@ throw new Error(err || "Failed to load profile");
         })}
       </div>
 
-      {/* Load errors / empty state */}
       {loadError && (
         <div className="mt-6 rounded-[16px] border border-red-700/40 bg-red-500/10 p-4 text-[14px] text-red-200">
           {loadError}
         </div>
       )}
 
-      {!loading && !me && (
+      {!loading && !me && !loadError && (
         <div className="mt-6 rounded-[16px] border border-slate-200/20 bg-slate-900/10 p-5 text-[14px] text-white/75">
-          Settings UI is ready, but <span className="text-emerald-200">/api/me</span> is not connected yet.
-          <div className="mt-2 text-[13px] text-white/60">
-            Next step: create the API route, then this page will auto-fill with your user data.
-          </div>
+          Could not load profile. Please refresh the page.
         </div>
       )}
 
-      {/* Content */}
       <div className="mt-6 grid gap-6">
         {loading ? (
           <div className="text-[14px] text-white/70">Loading…</div>
         ) : tab === "PERSONAL" ? (
           <>
-            {/* Profile card */}
             <div className="rounded-[22px] border border-slate-200/20 bg-transparent p-6">
               <div className="flex items-center justify-between">
                 <div className="text-[18px] font-semibold text-white" style={{ fontFamily: "serif" }}>
@@ -334,7 +277,6 @@ throw new Error(err || "Failed to load profile");
                 </div>
               </div>
 
-              {/* Picture placeholder */}
               <div className="mt-5 flex items-center gap-5">
                 <div className="h-20 w-20 rounded-full border border-slate-200/20 bg-slate-900/10" />
                 <button
@@ -346,7 +288,7 @@ throw new Error(err || "Failed to load profile");
               </div>
 
               <div className="mt-6 grid gap-5">
-                <Field label="Full Name" right={me?.user.verified ? "Verified" : undefined}>
+                <Field label="Full Name">
                   <input
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
@@ -411,7 +353,6 @@ throw new Error(err || "Failed to load profile");
               </div>
             </div>
 
-            {/* Verification */}
             <div className="rounded-[22px] border border-slate-200/20 bg-transparent p-6">
               <div className="flex items-center justify-between">
                 <div className="text-[18px] font-semibold text-white" style={{ fontFamily: "serif" }}>
@@ -419,20 +360,26 @@ throw new Error(err || "Failed to load profile");
                 </div>
               </div>
 
+              {!me?.user.verified && (
+                <div className="mt-4 rounded-[14px] border border-yellow-500/30 bg-yellow-500/10 p-3 text-[13px] text-yellow-200">
+                  Your account is not yet verified. You must complete verification before you can send, receive, or withdraw funds.
+                </div>
+              )}
+
               <div className="mt-5 space-y-3">
                 <RowItem
                   title="ID Verification"
                   status={me?.kyc?.idVerified ? "Verified" : "Not verified"}
                   statusOk={!!me?.kyc?.idVerified}
                   actionLabel={me?.kyc?.idVerified ? "View" : "Start"}
-                  onClick={() => alert("Next: open an ID upload flow (KYC).")}
+                  onClick={() => alert("ID verification flow coming soon. Contact support to manually verify your account.")}
                 />
                 <RowItem
                   title="BVN Verification (optional)"
                   status={me?.kyc?.bvnVerified ? "Verified" : "Not verified"}
                   statusOk={!!me?.kyc?.bvnVerified}
-                  actionLabel={me?.kyc?.bvnVerified ? "View" : "Coming soon"}
-                  onClick={() => alert("Coming soon")}
+                  actionLabel="Coming soon"
+                  onClick={() => {}}
                   disabled
                 />
               </div>
@@ -440,7 +387,6 @@ throw new Error(err || "Failed to load profile");
           </>
         ) : (
           <>
-            {/* Security card */}
             <div className="rounded-[22px] border border-slate-200/20 bg-transparent p-6">
               <div className="text-[18px] font-semibold text-white" style={{ fontFamily: "serif" }}>
                 Security settings
@@ -456,11 +402,11 @@ throw new Error(err || "Failed to load profile");
                   />
                 </Field>
 
-                <Field label="Phone Numbers" right={phones.length ? `${phones.length} saved` : undefined}>
+                <Field label="Phone Number" right={phones.length ? `${phones.length} saved` : undefined}>
                   <div className="space-y-3">
                     {phones.length === 0 ? (
                       <div className="rounded-[16px] border border-slate-200/10 bg-slate-900/10 px-4 py-4 text-[14px] text-white/70">
-                        No phone numbers yet.
+                        No phone number set.
                       </div>
                     ) : (
                       phones.map((p) => (
@@ -474,13 +420,7 @@ throw new Error(err || "Failed to load profile");
                               {p.verified ? "Verified" : "Not verified"}
                             </div>
                           </div>
-                          <button
-                            disabled={phoneBusy}
-                            onClick={() => removePhone(p.id)}
-                            className="rounded-[14px] border border-red-500/30 bg-red-500/10 px-4 py-2 text-[13px] font-semibold text-red-200 hover:bg-red-500/15 disabled:opacity-60"
-                          >
-                            Delete
-                          </button>
+                          <div className="text-[12px] text-white/50">Primary</div>
                         </div>
                       ))
                     )}
@@ -497,7 +437,7 @@ throw new Error(err || "Failed to load profile");
                         onClick={addPhone}
                         className="rounded-[16px] bg-emerald-500 px-5 py-4 text-[14px] font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
                       >
-                        Add
+                        Update
                       </button>
                     </div>
 
@@ -511,7 +451,6 @@ throw new Error(err || "Failed to load profile");
               </div>
             </div>
 
-            {/* Password + 2FA */}
             <div className="rounded-[22px] border border-slate-200/20 bg-transparent p-6">
               <div className="text-[18px] font-semibold text-white" style={{ fontFamily: "serif" }}>
                 Pin and Password
@@ -567,7 +506,7 @@ throw new Error(err || "Failed to load profile");
                 <div className="rounded-[18px] border border-slate-200/10 bg-slate-900/10 p-5">
                   <div className="text-[15px] font-semibold text-white/90">Two-Factor Authentication</div>
                   <div className="mt-2 text-[13px] text-white/70">
-                    Coming soon. We’ll enable 2FA after we finalize phone verification flow.
+                    Coming soon. We'll enable 2FA after we finalize phone verification flow.
                   </div>
                 </div>
               </div>
@@ -604,22 +543,23 @@ function RowItem(props: {
   return (
     <div className="flex items-center justify-between rounded-[18px] border border-slate-200/10 bg-slate-900/10 px-5 py-4">
       <div>
-        <div className="text-[15px] font-semibold text-white/90" style={{ fontFamily: "serif" }}>
-          {props.title}
-        </div>
-        <div className={["mt-1 inline-flex rounded-full border px-3 py-1 text-[12px]", props.statusOk ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-slate-200/20 bg-slate-900/10 text-white/70"].join(" ")}>
+        <div className="text-[15px] font-semibold text-white/90">{props.title}</div>
+        <div
+          className={[
+            "mt-1 inline-flex rounded-full border px-2 py-0.5 text-[12px]",
+            props.statusOk
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              : "border-slate-200/20 bg-slate-900/10 text-white/70",
+          ].join(" ")}
+        >
           {props.status}
         </div>
       </div>
       <button
+        type="button"
         disabled={props.disabled}
         onClick={props.onClick}
-        className={[
-          "rounded-[16px] px-5 py-3 text-[14px] font-semibold",
-          props.disabled
-            ? "border border-slate-200/10 bg-slate-900/10 text-white/40"
-            : "bg-emerald-500 text-black hover:bg-emerald-600",
-        ].join(" ")}
+        className="rounded-[14px] border border-slate-200/20 bg-slate-900/10 px-4 py-2 text-[13px] font-semibold text-white/90 hover:border-slate-200/35 disabled:opacity-40"
       >
         {props.actionLabel}
       </button>

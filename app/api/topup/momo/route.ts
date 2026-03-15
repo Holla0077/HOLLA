@@ -2,27 +2,43 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
+import { TransactionMethod } from "@prisma/client";
 
 function bad(msg: string, code = 400) {
   return NextResponse.json({ error: msg }, { status: code });
 }
 
 function toPesewas(amountGhs: string) {
-  // supports "10", "10.5", "10.50"
   const n = Number(amountGhs);
   if (!Number.isFinite(n) || n <= 0) return null;
   return BigInt(Math.round(n * 100));
 }
 
+function networkToMethod(network: string): TransactionMethod {
+  const n = network.toUpperCase();
+  if (n === "MTN") return "MTN_MOMO";
+  if (n === "TELECEL" || n === "VODAFONE") return "TELECEL_MOMO";
+  if (n === "AIRTELTIGO" || n === "AT") return "AT_MONEY";
+  return "MTN_MOMO";
+}
+
 export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get("holla_session")?.value; // keep your cookie name
+    const token = cookieStore.get("holla_session")?.value;
     if (!token) return bad("Unauthorized", 401);
 
     const payload = verifyToken(token) as { id?: string } | null;
     const userId = payload?.id;
     if (!userId) return bad("Unauthorized", 401);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { fullName: true, isVerified: true },
+    });
+    if (!user) return bad("Unauthorized", 401);
+    if (!user.isVerified) return bad("Your account must be verified before transacting. Please complete verification in Settings.", 403);
+    if (!user.fullName) return bad("Please complete your profile (full name required) in Settings before transacting.", 403);
 
     const body = await req.json();
     const { walletId, amount, phone, network } = body ?? {};
@@ -35,10 +51,9 @@ export async function POST(req: Request) {
     const amountPesewas = toPesewas(amount);
     if (!amountPesewas) return bad("Enter a valid amount");
 
-    // confirm wallet belongs to user and is GHS fiat wallet
     const wallet = await prisma.wallet.findFirst({
       where: { id: walletId, userId },
-      include: { asset: true }, // adjust if your schema differs
+      include: { asset: true },
     });
 
     if (!wallet) return bad("Wallet not found", 404);
@@ -55,18 +70,17 @@ export async function POST(req: Request) {
       },
     });
 
-    // OPTIONAL: also create a pending Transaction record if your app expects it
-    // (Adjust fields to match your Transaction model)
     await prisma.transaction.create({
       data: {
         userId,
-        walletId,
-        rail: "MOMO",
-        method: "TOPUP",
+        assetId: wallet.assetId,
+        rail: "GHANA",
+        method: networkToMethod(network),
         status: "PENDING",
         amount: amountPesewas,
         feeTotal: 0n,
-        metadata: { topupRequestId: topup.id, phone, network },
+        toWalletId: walletId,
+        metadata: { topupRequestId: topup.id, phone, network, type: "TOPUP" },
       },
     });
 

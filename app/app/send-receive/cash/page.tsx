@@ -16,12 +16,30 @@ function getErrorMessage(e: unknown) {
   return "Something went wrong";
 }
 
+function formatGhs(balanceStr: string) {
+  try {
+    const n = BigInt(balanceStr);
+    const sign = n < 0n ? "-" : "";
+    const abs = n < 0n ? -n : n;
+    const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const frac = (abs % 100n).toString().padStart(2, "0");
+    return `${sign}GH\u20b5 ${whole}.${frac}`;
+  } catch {
+    return `GH\u20b5 0.00`;
+  }
+}
+
 export default function SendReceiveCashPage() {
   const [wallets, setWallets] = useState<UiWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // cash wallet = GHS (or any FIAT you support)
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [sendBusy, setSendBusy] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendOk, setSendOk] = useState<string | null>(null);
+
   const cashWallet = useMemo(
     () => wallets.find((w) => w.code === "GHS") ?? null,
     [wallets]
@@ -46,10 +64,40 @@ export default function SendReceiveCashPage() {
         setLoading(false);
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
+
+  async function handleSend() {
+    setSendError(null);
+    setSendOk(null);
+    if (!recipient.trim()) { setSendError("Enter a recipient."); return; }
+    if (!amount || Number(amount) <= 0) { setSendError("Enter a valid amount."); return; }
+
+    setSendBusy(true);
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientIdentifier: recipient.trim(),
+          assetCode: "GHS",
+          amount,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSendError(data?.error || "Send failed."); return; }
+      setSendOk(`Sent successfully! Transaction ID: ${data.transactionId}`);
+      setRecipient("");
+      setAmount("");
+      const r2 = await fetch("/api/wallets");
+      const d2 = await r2.json();
+      if (d2.wallets) setWallets(d2.wallets);
+    } catch (e) {
+      setSendError(getErrorMessage(e));
+    } finally {
+      setSendBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -57,7 +105,7 @@ export default function SendReceiveCashPage() {
         <div className="text-xs text-slate-200/70">SEND / RECEIVE</div>
         <h1 className="mt-1 text-[22px] font-semibold text-white">Cash (GHS)</h1>
         <p className="mt-1 text-sm text-slate-200/80">
-          Send to another HOLLA user (username/email/phone) or receive cash into your wallet.
+          Send to another HOLLA user (username / email / phone) or share your wallet to receive.
         </p>
       </div>
 
@@ -72,7 +120,7 @@ export default function SendReceiveCashPage() {
           <div className="text-sm text-slate-300/80">Loading wallet…</div>
         ) : !cashWallet ? (
           <div className="text-sm text-slate-300/80">
-            No cash wallet found. (Your backend should auto-create wallets after signup.)
+            No cash wallet found. (Wallets are created automatically after signup.)
           </div>
         ) : (
           <>
@@ -88,48 +136,71 @@ export default function SendReceiveCashPage() {
 
             <div className="mt-4 text-sm text-slate-200/70">Balance</div>
             <div className="mt-2 text-[28px] font-semibold text-emerald-500">
-              {cashWallet.balance} <span className="text-lg text-slate-200/80">{cashWallet.code}</span>
+              {formatGhs(cashWallet.balance)}
             </div>
 
-            {/* Placeholder UI panels (we wire to your existing send/receive endpoints next) */}
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-[14px] border border-slate-200/25 p-4">
-                <div className="text-sm font-semibold text-white">Send Cash</div>
-                <div className="mt-1 text-xs text-slate-200/70">To username/email/phone</div>
-
-                <div className="mt-3 grid gap-2">
-                  <input
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
-                    placeholder="Recipient (username/email/+233...)"
-                  />
-                  <input
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
-                    placeholder="Amount (e.g. 50)"
-                  />
-                  <button
-                    type="button"
-                    className="mt-1 w-full rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-black hover:bg-emerald-600"
-                    onClick={() => alert("Next: wire to your cash send endpoint")}
-                  >
-                    Send
-                  </button>
+              {/* Send Cash */}
+              <div className="rounded-[14px] border border-slate-200/25 p-4 space-y-3">
+                <div>
+                  <div className="text-sm font-semibold text-white">Send Cash</div>
+                  <div className="mt-1 text-xs text-slate-200/70">To username / email / phone</div>
                 </div>
+
+                <input
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                  placeholder="Recipient (username / email / +233...)"
+                />
+                <input
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                  placeholder="Amount in GHS (e.g. 50)"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                />
+
+                {sendError && (
+                  <div className="rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-sm text-red-200">
+                    {sendError}
+                  </div>
+                )}
+                {sendOk && (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200 break-all">
+                    {sendOk}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  disabled={sendBusy}
+                  onClick={handleSend}
+                  className="w-full rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
+                >
+                  {sendBusy ? "Sending…" : "Send"}
+                </button>
               </div>
 
-              <div className="rounded-[14px] border border-slate-200/25 p-4">
-                <div className="text-sm font-semibold text-white">Receive Cash</div>
-                <div className="mt-1 text-xs text-slate-200/70">Your receive details</div>
+              {/* Receive Cash */}
+              <div className="rounded-[14px] border border-slate-200/25 p-4 space-y-3">
+                <div>
+                  <div className="text-sm font-semibold text-white">Receive Cash</div>
+                  <div className="mt-1 text-xs text-slate-200/70">Share your username or wallet ID</div>
+                </div>
 
-                <div className="mt-3 rounded-lg border border-slate-200/20 bg-slate-900/10 p-3 text-sm text-white/90">
+                <div className="rounded-lg border border-slate-200/20 bg-slate-900/10 p-3 text-sm text-white/90 break-all">
                   Wallet ID: <span className="text-emerald-300">{cashWallet.id}</span>
                 </div>
 
                 <button
                   type="button"
-                  className="mt-3 w-full rounded-lg border border-slate-200/40 px-4 py-2 text-sm font-semibold text-white hover:border-slate-200/70"
+                  className="w-full rounded-lg border border-slate-200/40 px-4 py-2 text-sm font-semibold text-white hover:border-slate-200/70"
                   onClick={async () => {
                     await navigator.clipboard.writeText(cashWallet.id);
-                    alert("Copied wallet id");
+                    alert("Wallet ID copied to clipboard");
                   }}
                 >
                   Copy Wallet ID
