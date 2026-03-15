@@ -1,0 +1,58 @@
+Do not redesign the app. I want a precise correction to the wallet cards on the Summary page and anywhere the same wallet strip is reused.
+
+Problem after the last edit:
+- The wallet cards became too short/compact.
+- They lost the longer horizontal shape they had before.
+- The large faded asset symbol inside each card moved too high.
+- I want the card proportions and symbol placement to match the older version more closely.
+
+Please correct this carefully.
+
+Requirements:
+
+1. Make the wallet cards longer horizontally again.
+- Increase the width so the cards feel like the older version.
+- Keep the same responsive horizontal scroll strip behavior.
+- Do not make them taller than necessary; prioritize restoring the wider look.
+
+2. Restore the internal layout balance of the card.
+- Keep:
+  - asset name at top-left
+  - ticker badge at top-right
+  - large balance number on the left
+  - “Available Balance” under the number
+- But give the content more breathing room like before.
+
+3. Move the large faded asset symbol lower inside the card.
+- The symbol should sit lower, like in the previous version.
+- It should feel anchored in the lower-right/mid-right area, not too high near the top.
+- Preserve the subtle faded watermark style.
+
+4. Keep the correct symbol for each asset.
+- BTC uses Bitcoin symbol
+- LTC uses Litecoin symbol
+- ETH uses Ethereum symbol
+- DASH uses Dash symbol
+- BCH uses Bitcoin Cash symbol
+- USDT uses Tether symbol
+- USDC uses USD Coin symbol
+
+5. Preserve the current theme.
+- Keep the same blue-black + emerald atmosphere
+- Keep the same borders, glow, and premium feel
+- Do not change unrelated layout or backend logic
+
+Implementation guidance:
+- Use the older wallet card proportions as the visual reference
+- Only adjust:
+  - card width/min-width
+  - padding
+  - symbol size and placement
+  - vertical alignment of internal content
+- If a shared wallet card component exists, fix it there so Summary and Send/Receive stay consistent
+
+After making the change, summarize:
+- which file controls the wallet card dimensions
+- what width/min-width was changed to
+- how the watermark symbol position was adjusted
+- which shared component was updated

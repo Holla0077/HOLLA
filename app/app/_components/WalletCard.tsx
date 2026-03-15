@@ -57,14 +57,14 @@ export function WalletCard({
     <button
       type="button"
       onClick={onClick}
-      style={{ padding: 14 }}
+      style={{ padding: "20px 24px" }}
       className={[
-        "relative min-w-[280px] overflow-hidden text-left transition-all",
+        "relative min-w-[340px] overflow-hidden text-left transition-all",
         walletCardGlass,
         active ? walletCardActiveClass : walletCardInactiveClass,
       ].join(" ")}
     >
-      <div className="pointer-events-none absolute right-5 top-6 text-[80px] font-black text-white/5 leading-none select-none">
+      <div className="pointer-events-none absolute right-5 bottom-3 text-[88px] font-black text-white/5 leading-none select-none">
         {mark}
       </div>
 
@@ -75,7 +75,7 @@ export function WalletCard({
         </div>
       </div>
 
-      <div className="mt-4 text-[44px] font-semibold text-white leading-none">
+      <div className="mt-5 text-[44px] font-semibold text-white leading-none">
         {formattedBalance}
       </div>
       <div className="mt-2 text-[13px] text-white/65">Available Balance</div>
