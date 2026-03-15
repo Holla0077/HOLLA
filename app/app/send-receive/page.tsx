@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { WalletCard, formatWalletBalance, walletCardGlass } from "@/app/app/_components/WalletCard";
 
 type UiWallet = {
   id: string;
@@ -43,20 +44,6 @@ type MeUser = {
   username?: string | null;
   email?: string | null;
   phone?: string | null;
-};
-
-const glass =
-  "rounded-[22px] border border-slate-200/15 bg-slate-950/10 backdrop-blur-sm shadow-[0_0_0_1px_rgba(255,255,255,0.02)]";
-
-const ASSET_WATERMARK: Record<string, string> = {
-  GHS: "₵",
-  BTC: "₿",
-  LTC: "Ł",
-  ETH: "Ξ",
-  DASH: "Đ",
-  BCH: "Ƀ",
-  USDT_ERC20: "₮",
-  USDC_ERC20: "$",
 };
 
 export default function SendReceivePage() {
@@ -299,7 +286,7 @@ export default function SendReceivePage() {
       )}
 
       {/* Wallet selector row */}
-      <section className={`mt-6 p-4 ${glass}`}>
+      <section className={`mt-6 p-4 ${walletCardGlass}`}>
         <div className="flex items-center justify-between">
           <div className="text-[14px] font-semibold text-white/90">Select wallet</div>
           <div className="text-[12px] text-slate-200/60">{mode.toUpperCase()}</div>
@@ -314,32 +301,18 @@ export default function SendReceivePage() {
             wallets.map((w) => {
               const active = w.id === selectedId;
               return (
-                <button
+                <WalletCard
                   key={w.id}
+                  name={w.name}
+                  code={w.code}
+                  formattedBalance={formatWalletBalance(w.code, w.balance)}
+                  active={active}
                   onClick={() => {
                     setSelectedId(w.id);
                     resetSendMessages();
                     setCopied(false);
                   }}
-                  className={[
-                    "relative min-w-[220px] overflow-hidden rounded-[22px] border px-4 py-3 text-left transition-all backdrop-blur-sm",
-                    active
-                      ? "border-emerald-500/40 bg-slate-950/20 shadow-[0_0_32px_rgba(16,185,129,0.18)]"
-                      : "border-slate-200/15 bg-slate-950/10 hover:border-slate-200/25",
-                  ].join(" ")}
-                >
-                  <div className="pointer-events-none absolute right-3 top-3 text-[60px] font-black text-white/5 leading-none">
-                    {ASSET_WATERMARK[w.code] ?? (isFiat(w.code) ? "₵" : "₿")}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-[13px] font-semibold text-white/90">{w.name}</div>
-                    <div className="rounded-full border border-slate-200/35 px-2 py-0.5 text-[12px] text-white/90">
-                      {w.code}
-                    </div>
-                  </div>
-                  <div className="mt-3 text-[22px] font-semibold text-white leading-none">{w.balance}</div>
-                  <div className="mt-1 text-[12px] text-white/70">Available</div>
-                </button>
+                />
               );
             })
           )}

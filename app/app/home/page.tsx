@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { WalletCard, formatWalletBalance } from "@/app/app/_components/WalletCard";
 
 type UiWallet = {
   id: string;
@@ -88,17 +89,6 @@ function getErrorMessage(e: unknown) {
 }
 
 // placeholders (we’ll move to /api/config later)
-const ASSET_WATERMARK: Record<string, string> = {
-  GHS: "₵",
-  BTC: "₿",
-  LTC: "Ł",
-  ETH: "Ξ",
-  DASH: "Đ",
-  BCH: "Ƀ",
-  USDT_ERC20: "₮",
-  USDC_ERC20: "$",
-};
-
 const USD_GHS_RATE = 12.5;
 const STATIC_PRICES: Record<string, { buy: number; sell: number }> = {
   BTC: { buy: 950000, sell: 910000 },
@@ -134,8 +124,6 @@ function formatFiatFromMinorUnits(balanceStr: string, currency = "GH₵") {
 }
 
 export default function HomePage() {
-  const glass = "rounded-[22px] border border-slate-200/15 bg-slate-950/10 backdrop-blur-sm shadow-[0_0_0_1px_rgba(255,255,255,0.02)]";
-
   const sp = useSearchParams();
   const mode = (sp.get("mode") || "cash").toLowerCase() === "crypto" ? "crypto" : "cash";
 
@@ -305,39 +293,14 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
             visibleWallets.map((w) => {
               const active = w.id === selectedId;
               return (
-                <button
+                <WalletCard
                   key={w.id}
+                  name={w.name}
+                  code={w.code}
+                  formattedBalance={formatWalletBalance(w.code, w.balance)}
+                  active={active}
                   onClick={() => setSelectedId(w.id)}
-                  className={[
-  "min-w-[340px] p-5 text-left transition-all relative overflow-hidden",
-  glass,
-  active
-    ? "border-emerald-500/40 shadow-[0_0_32px_rgba(16,185,129,0.18)]"
-    : "hover:border-slate-200/25",
-].join(" ")}
-
-                  style={{ padding: 14 }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="text-[13px] font-semibold text-white/90">{w.name}</div>
-                    <div className="rounded-full border border-slate-200/40 px-3 py-1 text-[12px] text-white/90">
-                      {w.code}
-                    </div>
-                    <div className="pointer-events-none absolute right-5 top-6 text-[80px] font-black text-white/5">
-  {ASSET_WATERMARK[w.code] ?? (isFiat(w.code) ? "₵" : "₿")}
-</div>
-
-
-                  </div>
-
-                  <div className="mt-4 text-[44px] font-semibold text-white leading-none">
-  {((w.code === "GHS") || (w.code === "GH₵"))
-  ? formatGhs(w.balance)
-  : w.balance}
-
-</div>
-<div className="mt-2 text-[13px] text-white/65">Available Balance</div>
-                </button>
+                />
               );
             })
           )}
