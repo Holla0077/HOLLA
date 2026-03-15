@@ -61,6 +61,7 @@ model User {
   // relations...
   wallets      Wallet[]
   transactions Transaction[] @relation("UserTransactions")
+  topupRequests TopupRequest[]
 
   isVerified Boolean @default(false)
   verifiedAt DateTime?
@@ -98,6 +99,7 @@ model Wallet {
   transactionsFrom Transaction[] @relation("FromWallet")
   transactionsTo   Transaction[] @relation("ToWallet")
   ledgerEntries    LedgerEntry[]
+  topupRequests    TopupRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
