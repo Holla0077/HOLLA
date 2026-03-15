@@ -108,11 +108,11 @@ export async function POST(req: Request) {
     });
     if (!recipient) return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
 
+    // Pre-flight: wallet existence checks (ok outside tx — wallets are not deleted)
     const fromWallet = await prisma.wallet.findUnique({
       where: { userId_assetId: { userId, assetId: asset.id } },
     });
     if (!fromWallet) return NextResponse.json({ error: "You don't have a wallet for this asset" }, { status: 400 });
-    if (fromWallet.balance < amountMinor) return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
 
     const toWallet = await prisma.wallet.findUnique({
       where: { userId_assetId: { userId: recipient.id, assetId: asset.id } },
@@ -120,10 +120,17 @@ export async function POST(req: Request) {
     if (!toWallet) return NextResponse.json({ error: "Recipient does not have a wallet for this asset" }, { status: 400 });
 
     const tx = await prisma.$transaction(async (db) => {
-      await db.wallet.update({
-        where: { id: fromWallet.id },
+      // Atomic check-and-debit in a single SQL UPDATE.
+      // WHERE balance >= amountMinor means the row is only updated if funds are
+      // sufficient AT THIS EXACT MOMENT — concurrent requests cannot both pass.
+      const debit = await db.wallet.updateMany({
+        where: { id: fromWallet.id, balance: { gte: amountMinor } },
         data: { balance: { decrement: amountMinor } },
       });
+      if (debit.count === 0) {
+        throw new Error("Insufficient balance");
+      }
+
       await db.wallet.update({
         where: { id: toWallet.id },
         data: { balance: { increment: amountMinor } },

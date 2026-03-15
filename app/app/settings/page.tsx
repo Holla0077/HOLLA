@@ -55,6 +55,10 @@ export default function SettingsPage() {
   const [pwNext, setPwNext] = useState("");
   const [pwNext2, setPwNext2] = useState("");
 
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyOk, setVerifyOk] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -213,9 +217,29 @@ export default function SettingsPage() {
     }
   }
 
+  async function submitVerificationRequest() {
+    setVerifyBusy(true);
+    setVerifyOk(null);
+    setVerifyError(null);
+    try {
+      const res = await fetch("/api/me/verify-request", { method: "POST" });
+      const ct = res.headers.get("content-type") || "";
+      const data = ct.includes("application/json") ? await res.json() : { error: await res.text() };
+      if (!res.ok) {
+        setVerifyError(data?.error || "Failed to submit request.");
+        return;
+      }
+      setVerifyOk(data.message || "Verification request submitted.");
+    } catch (e) {
+      setVerifyError(getErrorMessage(e));
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
   return (
     <div className="max-w-[980px]">
-      <div className="mb-6">
+      <div className="mb-5">
         <div className="text-[28px] font-semibold text-white" style={{ fontFamily: "serif" }}>
           Settings
         </div>
@@ -223,6 +247,36 @@ export default function SettingsPage() {
           Manage your personal info and security.
         </div>
       </div>
+
+      {/* Verification status banner — always visible above tabs */}
+      {!loading && me && (
+        me.user.verified ? (
+          <div className="mb-5 flex items-center gap-3 rounded-[16px] border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M5 13l4 4L19 7" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-[14px] font-semibold text-emerald-200">Account Verified</div>
+              <div className="text-[12px] text-emerald-200/70">You can send, receive, and transact freely.</div>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-5 flex items-center gap-3 rounded-[16px] border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-yellow-500/20">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 9v4M12 17h.01" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#fbbf24" strokeWidth="2" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="text-[14px] font-semibold text-yellow-200">Account Not Verified</div>
+              <div className="text-[12px] text-yellow-200/70">Sending, receiving, and withdrawing are blocked until your identity is verified.</div>
+            </div>
+          </div>
+        )
+      )}
 
       <div className="flex items-center gap-10 border-b border-slate-200/20 pb-3">
         {(["PERSONAL", "SECURITY"] as const).map((t) => {
@@ -369,11 +423,39 @@ export default function SettingsPage() {
               <div className="mt-5 space-y-3">
                 <RowItem
                   title="ID Verification"
-                  status={me?.kyc?.idVerified ? "Verified" : "Not verified"}
+                  status={
+                    me?.kyc?.idVerified
+                      ? "Verified"
+                      : verifyOk
+                      ? "Pending review"
+                      : "Not verified"
+                  }
                   statusOk={!!me?.kyc?.idVerified}
-                  actionLabel={me?.kyc?.idVerified ? "View" : "Start"}
-                  onClick={() => alert("ID verification flow coming soon. Contact support to manually verify your account.")}
+                  statusPending={!me?.kyc?.idVerified && !!verifyOk}
+                  actionLabel={
+                    me?.kyc?.idVerified
+                      ? "Verified"
+                      : verifyBusy
+                      ? "Submitting..."
+                      : verifyOk
+                      ? "Requested"
+                      : "Request verification"
+                  }
+                  onClick={submitVerificationRequest}
+                  disabled={!!me?.kyc?.idVerified || verifyBusy || !!verifyOk}
                 />
+
+                {verifyError && (
+                  <div className="rounded-[14px] border border-red-700/40 bg-red-500/10 p-3 text-[13px] text-red-200">
+                    {verifyError}
+                  </div>
+                )}
+                {verifyOk && (
+                  <div className="rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 p-3 text-[13px] text-emerald-200">
+                    {verifyOk}
+                  </div>
+                )}
+
                 <RowItem
                   title="BVN Verification (optional)"
                   status={me?.kyc?.bvnVerified ? "Verified" : "Not verified"}
@@ -536,22 +618,22 @@ function RowItem(props: {
   title: string;
   status: string;
   statusOk: boolean;
+  statusPending?: boolean;
   actionLabel: string;
   onClick: () => void;
   disabled?: boolean;
 }) {
+  const pillClass = props.statusOk
+    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+    : props.statusPending
+    ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-200"
+    : "border-slate-200/20 bg-slate-900/10 text-white/70";
+
   return (
     <div className="flex items-center justify-between rounded-[18px] border border-slate-200/10 bg-slate-900/10 px-5 py-4">
       <div>
         <div className="text-[15px] font-semibold text-white/90">{props.title}</div>
-        <div
-          className={[
-            "mt-1 inline-flex rounded-full border px-2 py-0.5 text-[12px]",
-            props.statusOk
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-              : "border-slate-200/20 bg-slate-900/10 text-white/70",
-          ].join(" ")}
-        >
+        <div className={["mt-1 inline-flex rounded-full border px-2 py-0.5 text-[12px]", pillClass].join(" ")}>
           {props.status}
         </div>
       </div>
