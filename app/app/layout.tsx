@@ -232,20 +232,22 @@ const toggleBase =
             </div>
           </div>
 
-          {/* DIVIDER LINE — explicitly placed LOWER (below logo & logout area) */}
-          <div className="h-[2px] w-full bg-slate-200/30" />
+          {/* DIVIDER LINE — premium gradient separator */}
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200/30 to-transparent" />
         </div>
       </header>
 
       {/* FIXED SIDEBAR */}
       <aside
-        className="fixed left-0 z-40 border-r border-slate-200/20 bg-[#070B1A]"
+        className="fixed left-0 z-40 bg-[#070B1A]"
         style={{
           top: HEADER_H,
           width: SIDEBAR_W,
           height: `calc(100vh - ${HEADER_H}px)`,
         }}
       >
+        {/* Premium vertical divider — gradient fade top & bottom */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-slate-200/20 to-transparent" />
         <div className="px-9 py-8">
   <div className="space-y-8">
   {sideNav.map((item) => {

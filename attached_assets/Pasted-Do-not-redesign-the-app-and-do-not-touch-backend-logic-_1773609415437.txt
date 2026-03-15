@@ -1,0 +1,64 @@
+Do not redesign the app and do not touch backend logic.
+
+I want a UI refinement pass only.
+
+Tasks:
+
+1. Make the Send / Receive page panels match the Summary page panels exactly.
+- Reuse the same panel/card component styling used on the Summary page.
+- Match the same:
+  - background treatment
+  - border style
+  - radius
+  - spacing
+  - glow/shadow behavior
+  - typography hierarchy
+  - internal padding
+- Do not make Send / Receive feel like a separate design system.
+- It should feel like the same product surface as Summary.
+
+2. Fix crypto wallet card icons/symbols.
+- Right now crypto panels are reusing the Bitcoin logo across all crypto cards.
+- Replace that behavior so each crypto card uses the correct asset symbol / badge / mark for that asset.
+- For example:
+  - BTC → Bitcoin
+  - LTC → Litecoin
+  - ETH → Ethereum
+  - DASH → Dash
+  - BCH → Bitcoin Cash
+  - USDT → Tether
+  - USDC → USD Coin
+- Use a clean, consistent visual treatment for all asset badges.
+- Do not use random colors that break the current theme.
+
+3. Make the divider lines feel more premium, inspired by Spotify-level polish.
+- Improve:
+  - the horizontal line under the top bar
+  - the vertical divider between sidebar and main content
+- Keep them subtle and premium.
+- Avoid harsh flat borders.
+- Use a refined approach such as:
+  - soft transparency
+  - subtle gradient fade
+  - glow or layered border treatment
+  - thin premium separator styling
+- Keep it elegant and restrained, not flashy.
+
+Important rules:
+- Preserve the current blue-black + emerald brand theme.
+- Preserve the current layout structure.
+- Do not change functionality.
+- Do not modify APIs, Prisma, or route logic.
+- Only refine visuals and component consistency.
+
+Before making changes:
+1. Identify which component or section defines the Summary page card style.
+2. Reuse that style for Send / Receive.
+3. Identify how crypto asset cards choose their icon today, and replace it with an asset-specific mapping.
+4. Identify where the top divider and sidebar divider are styled, and refine them there rather than adding one-off hacks.
+
+After making changes, summarize:
+- which files were updated
+- how card styling was unified
+- how asset icon mapping now works
+- how the divider treatment was improved

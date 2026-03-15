@@ -88,6 +88,17 @@ function getErrorMessage(e: unknown) {
 }
 
 // placeholders (we’ll move to /api/config later)
+const ASSET_WATERMARK: Record<string, string> = {
+  GHS: "₵",
+  BTC: "₿",
+  LTC: "Ł",
+  ETH: "Ξ",
+  DASH: "Đ",
+  BCH: "Ƀ",
+  USDT_ERC20: "₮",
+  USDC_ERC20: "$",
+};
+
 const USD_GHS_RATE = 12.5;
 const STATIC_PRICES: Record<string, { buy: number; sell: number }> = {
   BTC: { buy: 950000, sell: 910000 },
@@ -313,7 +324,7 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                       {w.code}
                     </div>
                     <div className="pointer-events-none absolute right-5 top-6 text-[80px] font-black text-white/5">
-  {isFiat(w.code) ? "₵" : "₿"}
+  {ASSET_WATERMARK[w.code] ?? (isFiat(w.code) ? "₵" : "₿")}
 </div>
 
 

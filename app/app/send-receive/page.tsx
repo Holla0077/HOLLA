@@ -45,6 +45,20 @@ type MeUser = {
   phone?: string | null;
 };
 
+const glass =
+  "rounded-[22px] border border-slate-200/15 bg-slate-950/10 backdrop-blur-sm shadow-[0_0_0_1px_rgba(255,255,255,0.02)]";
+
+const ASSET_WATERMARK: Record<string, string> = {
+  GHS: "₵",
+  BTC: "₿",
+  LTC: "Ł",
+  ETH: "Ξ",
+  DASH: "Đ",
+  BCH: "Ƀ",
+  USDT_ERC20: "₮",
+  USDC_ERC20: "$",
+};
+
 export default function SendReceivePage() {
   const sp = useSearchParams();
   const mode = (sp.get("mode") || "cash").toLowerCase() === "crypto" ? "crypto" : "cash";
@@ -285,7 +299,7 @@ export default function SendReceivePage() {
       )}
 
       {/* Wallet selector row */}
-      <section className="mt-6 rounded-[18px] border border-slate-200/30 bg-transparent p-4">
+      <section className={`mt-6 p-4 ${glass}`}>
         <div className="flex items-center justify-between">
           <div className="text-[14px] font-semibold text-white/90">Select wallet</div>
           <div className="text-[12px] text-slate-200/60">{mode.toUpperCase()}</div>
@@ -308,12 +322,15 @@ export default function SendReceivePage() {
                     setCopied(false);
                   }}
                   className={[
-                    "min-w-[220px] rounded-[16px] border px-4 py-3 text-left transition-colors",
+                    "relative min-w-[220px] overflow-hidden rounded-[22px] border px-4 py-3 text-left transition-all backdrop-blur-sm",
                     active
-                      ? "border-emerald-500 bg-emerald-500/10"
-                      : "border-slate-200/25 hover:border-slate-200/45",
+                      ? "border-emerald-500/40 bg-slate-950/20 shadow-[0_0_32px_rgba(16,185,129,0.18)]"
+                      : "border-slate-200/15 bg-slate-950/10 hover:border-slate-200/25",
                   ].join(" ")}
                 >
+                  <div className="pointer-events-none absolute right-3 top-3 text-[60px] font-black text-white/5 leading-none">
+                    {ASSET_WATERMARK[w.code] ?? (isFiat(w.code) ? "₵" : "₿")}
+                  </div>
                   <div className="flex items-center justify-between">
                     <div className="text-[13px] font-semibold text-white/90">{w.name}</div>
                     <div className="rounded-full border border-slate-200/35 px-2 py-0.5 text-[12px] text-white/90">
@@ -358,7 +375,7 @@ export default function SendReceivePage() {
       {/* content panels */}
       <section className="mt-4 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
         {/* left: main panel */}
-        <div className="rounded-[20px] border border-slate-200/30 bg-transparent p-5">
+        <div className="rounded-[22px] border border-slate-200/40 bg-transparent p-5">
           {!selected ? (
             <div className="text-[14px] text-slate-200/70">Select a wallet to continue.</div>
           ) : tab === "SEND" ? (
@@ -370,7 +387,7 @@ export default function SendReceivePage() {
 
               <div className="mt-5 space-y-3">
                 {isFiat(selected.code) ? (
-                  <div className="rounded-[16px] border border-slate-200/25 p-4">
+                  <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
                     <div className="text-[13px] font-semibold text-white/90">Send to</div>
                     <div className="mt-1 text-[12px] text-white/70">
                       Username, email, or phone (internal transfer)
@@ -383,7 +400,7 @@ export default function SendReceivePage() {
                     />
                   </div>
                 ) : (
-                  <div className="rounded-[16px] border border-slate-200/25 p-4">
+                  <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
                     <div className="text-[13px] font-semibold text-white/90">Wallet address</div>
                     <div className="mt-1 text-[12px] text-white/70">External address (blockchain rail)</div>
                     <input
@@ -395,7 +412,7 @@ export default function SendReceivePage() {
                   </div>
                 )}
 
-                <div className="rounded-[16px] border border-slate-200/25 p-4">
+                <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
                   <div className="text-[13px] font-semibold text-white/90">Amount</div>
                   <input
                     value={sendAmount}
@@ -434,10 +451,10 @@ export default function SendReceivePage() {
       {selected.name} <span className="text-emerald-400">* {selected.code}</span>
     </div>
 
-    <div className="mt-5 rounded-[16px] border border-slate-200/25 p-4">
+    <div className="mt-5 rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
       {isFiat(selected.code) ? (
         <>
-          {/* CASH RECEIVE (keep as-is if you want cash to show link + details) */}
+          {/* CASH RECEIVE */}
           <div className="text-[13px] font-semibold text-white/90">Receiving link</div>
           <div className="mt-2 rounded-[12px] border border-slate-200/20 bg-slate-900/10 p-3">
             <div className="break-all text-[13px] text-white/90">{receiveLink || "—"}</div>
@@ -477,7 +494,7 @@ export default function SendReceivePage() {
         <>
           {/* CRYPTO RECEIVE (ONLY address + QR) */}
           <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-            <div className="rounded-[16px] border border-slate-200/25 p-4 flex items-center justify-center">
+            <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 p-4 flex items-center justify-center">
               {receiveAddress ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -492,7 +509,7 @@ export default function SendReceivePage() {
               )}
             </div>
 
-            <div className="rounded-[16px] border border-slate-200/25 p-4">
+            <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
               <div className="text-[13px] font-semibold text-white/90">Wallet address</div>
               <div className="mt-2 rounded-[12px] border border-slate-200/20 bg-slate-900/10 p-3">
                 <div className="break-all text-[13px] text-white/90">
@@ -527,25 +544,25 @@ export default function SendReceivePage() {
         </div>
 
         {/* right: notes */}
-        <div className="rounded-[20px] border border-slate-200/30 bg-transparent p-5">
+        <div className="rounded-[22px] border border-slate-200/40 bg-transparent p-5">
           <div className="text-[16px] font-semibold text-white">Notes</div>
 
           <div className="mt-3 space-y-3 text-[13px] text-white/75">
-            <div className="rounded-[14px] border border-slate-200/20 bg-slate-900/10 p-4">
+            <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
               <div className="font-semibold text-white/90">Receive rules</div>
               <div className="mt-1">
                 Receive only shows QR + link + your details. Top Up is handled on Summary via a modal.
               </div>
             </div>
 
-            <div className="rounded-[14px] border border-slate-200/20 bg-slate-900/10 p-4">
+            <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
               <div className="font-semibold text-white/90">Send rules</div>
               <div className="mt-1">
                 Cash (GHS): internal transfers. Crypto: requires a destination address.
               </div>
             </div>
 
-            <div className="rounded-[14px] border border-slate-200/20 bg-slate-900/10 p-4">
+            <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
               <div className="font-semibold text-white/90">Next</div>
               <div className="mt-1">
                 Add <span className="text-emerald-200">/api/me</span> so username/email/phone are real, and add{" "}
