@@ -301,7 +301,7 @@ const toggleBase =
 
       {/* CONTENT AREA (scrolls; bars stay fixed) */}
       <main
-        className="bg-[#070B1A]"
+        className="relative bg-[#070B1A]"
         style={{
           paddingTop: HEADER_H + 18,
           paddingLeft: SIDEBAR_W + 28,
@@ -309,6 +309,9 @@ const toggleBase =
           paddingBottom: 28,
         }}
       >
+        {/* Shared page glow — same atmosphere as Summary page */}
+        <div className="pointer-events-none absolute -top-24 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[90px]" />
+        <div className="pointer-events-none absolute top-0 left-32 h-[420px] w-[420px] rounded-full bg-emerald-500/[0.07] blur-[80px]" />
         {children}
       </main>
     </div>

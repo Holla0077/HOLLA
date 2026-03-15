@@ -263,9 +263,6 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
   // This only affects content rendered inside this page.
   return (
   <div className="relative font-sans">
-    {/* soft background glow */}
-    <div className="pointer-events-none absolute -top-24 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[90px]" />
-    <div className="pointer-events-none absolute -top-10 left-[320px] h-[420px] w-[420px] rounded-full bg-emerald-500/8 blur-[80px]" />
 
     
 
