@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CEO
+  MANAGER
+  WAITER
+}
+
+enum OrderStatus {
+  OPEN
+  PAID
+  VOID
+}
+
+enum MovementType {
+  STOCK_IN
+  SALE
+  VOID_REVERSAL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String
+  role         Role
+  passwordHash String?
+  pinHash      String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders    Order[]
+  auditLogs AuditLog[]
+}
+
+model Product {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sellPrice Int
+  costPrice Int
+  qty       Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  status       OrderStatus @default(OPEN)
+  totalRevenue Int         @default(0)
+  totalProfit  Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  paidAt       DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id          String @id @default(cuid())
+  qty         Int
+  unitPrice   Int
+  costPrice   Int
+  lineRevenue Int    @default(0)
+  lineProfit  Int    @default(0)
+
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+}
+
+model StockMovement {
+  id            String       @id @default(cuid())
+  type          MovementType
+  qty           Int
+  costSnapshot  Int
+  priceSnapshot Int
+  note          String?
+  createdAt     DateTime     @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  orderId   String?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}

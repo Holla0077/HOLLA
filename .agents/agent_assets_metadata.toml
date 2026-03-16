@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "fGSjwJ7grQI_UkEZBRMfh"
+uri = "file://buzpos-export.zip"
+type = "unspecified"
+title = "BUZ POS — Export Package"

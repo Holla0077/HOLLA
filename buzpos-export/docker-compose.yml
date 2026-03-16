@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: buzpos
+      POSTGRES_PASSWORD: buzpos_secret
+      POSTGRES_DB: buzpos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://buzpos:buzpos_secret@postgres:5432/buzpos
+      JWT_SECRET: change_this_to_a_real_secret
+      NODE_ENV: production
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
