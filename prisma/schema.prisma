@@ -7,248 +7,104 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum TransactionStatus {
-  PENDING
-  COMPLETED
-  FAILED
+enum Role {
+  CEO
+  MANAGER
+  WAITER
 }
 
-enum TransactionRail {
-  HOLLA_INTERNAL
-  GHANA
-  BLOCKCHAIN
+enum OrderStatus {
+  OPEN
+  PAID
+  VOID
 }
 
-enum TransactionMethod {
-  // GHANA
-  MTN_MOMO
-  TELECEL_MOMO
-  AT_MONEY
-  BANK_TRANSFER
-
-  // INTERNAL
-  HOLLA_TO_HOLLA
-
-  // BLOCKCHAIN
-  BTC
-  ETH
-  USDT_ERC20
-  USDC_ERC20
-  LTC
-  DASH
-  BCH
-}
-
-enum LedgerEntryType {
-  DEBIT
-  CREDIT
+enum MovementType {
+  STOCK_IN
+  SALE
+  VOID_REVERSAL
 }
 
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
-  email        String   @unique
-  phone        String   @unique
-  passwordHash String
+  displayName  String
+  role         Role
+  passwordHash String?
+  pinHash      String?
+  active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // ✅ add these:
-  fullName    String?
-  gender      String? // later we can make enum
-  dateOfBirth DateTime? // store as DateTime
-
-  // relations...
-  wallets      Wallet[]
-  transactions Transaction[] @relation("UserTransactions")
-  topupRequests TopupRequest[]
-
-  isVerified Boolean @default(false)
-  verifiedAt DateTime?
+  orders    Order[]
+  auditLogs AuditLog[]
 }
 
-enum AssetType {
-  FIAT
-  CRYPTO
-}
-
-model Asset {
-  id   String    @id @default(cuid())
-  code String    @unique // e.g. GHS, BTC, ETH, USDT-ERC20
-  name String
-  type AssetType
-
-  wallets       Wallet[]
-  feeRules      FeeRule[]
-  transactions  Transaction[]
-  ledgerEntries LedgerEntry[]
-  feeCharges    FeeCharge[]
-}
-
-model Wallet {
-  id     String @id @default(cuid())
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  asset   Asset  @relation(fields: [assetId], references: [id])
-  assetId String
-
-  // money in minor units (e.g. pesewas, satoshis)
-  balance BigInt @default(0) @db.BigInt
-
-  transactionsFrom Transaction[] @relation("FromWallet")
-  transactionsTo   Transaction[] @relation("ToWallet")
-  ledgerEntries    LedgerEntry[]
-  topupRequests    TopupRequest[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, assetId])
-}
-
-model TopupRequest {
+model Product {
   id        String   @id @default(cuid())
-  userId    String
-  walletId  String
-  amount    BigInt   // store in pesewas (GHS * 100)
-  phone     String
-  network   String   // "MTN" | "VODAFONE" | "AIRTELTIGO"
-  status    String   @default("PENDING") // PENDING | COMPLETED | FAILED | CANCELED
+  name      String   @unique
+  sellPrice Int
+  costPrice Int
+  qty       Int      @default(0)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // relations (adjust to your existing User/Wallet models)
-  user      User     @relation(fields: [userId], references: [id])
-  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
 }
 
-model Transaction {
-  id     String @id @default(cuid())
-  user   User   @relation("UserTransactions", fields: [userId], references: [id])
+model Order {
+  id           String      @id @default(cuid())
+  status       OrderStatus @default(OPEN)
+  totalRevenue Int         @default(0)
+  totalProfit  Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  paidAt       DateTime?
+
   userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  asset   Asset  @relation(fields: [assetId], references: [id])
-  assetId String
+  items OrderItem[]
+}
 
-  rail   TransactionRail
-  method TransactionMethod
-  status TransactionStatus @default(PENDING)
+model OrderItem {
+  id          String @id @default(cuid())
+  qty         Int
+  unitPrice   Int
+  costPrice   Int
+  lineRevenue Int    @default(0)
+  lineProfit  Int    @default(0)
 
-  // Internal HOLLA-to-HOLLA transfers will use fromWallet/toWallet
-  fromWallet   Wallet? @relation("FromWallet", fields: [fromWalletId], references: [id])
-  fromWalletId String?
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-  toWallet   Wallet? @relation("ToWallet", fields: [toWalletId], references: [id])
-  toWalletId String?
+  @@unique([orderId, productId])
+}
 
-  // positive amount in minor units
-  amount BigInt @db.BigInt
+model StockMovement {
+  id            String       @id @default(cuid())
+  type          MovementType
+  qty           Int
+  costSnapshot  Int
+  priceSnapshot Int
+  note          String?
+  createdAt     DateTime     @default(now())
 
-  // total fee charged (minor units)
-  feeTotal BigInt @default(0) @db.BigInt
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  orderId   String?
+}
 
-  reference String? @unique
-  metadata  Json?
-
-  ledgerEntries LedgerEntry[]
-  feeCharges    FeeCharge[]
-
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  detail    String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
 
-model LedgerEntry {
-  id String @id @default(cuid())
-
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
-  transactionId String
-
-  wallet   Wallet? @relation(fields: [walletId], references: [id])
-  walletId String?
-
-  asset   Asset  @relation(fields: [assetId], references: [id])
-  assetId String
-
-  // DEBIT or CREDIT for bookkeeping
-  entryType LedgerEntryType
-
-  // signed amount in minor units; sum of all entries per asset per transaction must be 0
-  amount BigInt @db.BigInt
-
-  createdAt DateTime @default(now())
-}
-
-model FeeRule {
-  id String @id @default(cuid())
-
-  rail   TransactionRail
-  method TransactionMethod
-
-  asset   Asset?  @relation(fields: [assetId], references: [id])
-  assetId String?
-
-  // optional flat fee in minor units
-  flatAmount BigInt? @db.BigInt
-
-  // optional percentage in basis points (100 = 1%)
-  percentageBps Int?
-
-  isActive Boolean @default(true)
-
-  feeCharges FeeCharge[]
-}
-
-model FeeCharge {
-  id String @id @default(cuid())
-
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
-  transactionId String
-
-  feeRule   FeeRule? @relation(fields: [feeRuleId], references: [id])
-  feeRuleId String?
-
-  asset   Asset  @relation(fields: [assetId], references: [id])
-  assetId String
-
-  amount BigInt @db.BigInt
-
-  createdAt DateTime @default(now())
-}
-
-model SupportConversation {
-  id     String                    @id @default(cuid())
   userId String
-  status SupportConversationStatus @default(OPEN)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  messages SupportMessage[]
-
-  @@index([userId])
-}
-
-model SupportMessage {
-  id             String        @id @default(cuid())
-  conversationId String
-  sender         SupportSender
-  body           String
-
-  createdAt DateTime @default(now())
-
-  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId, createdAt])
-}
-
-enum SupportConversationStatus {
-  OPEN
-  CLOSED
-}
-
-enum SupportSender {
-  USER
-  AGENT
-  SYSTEM
+  user   User   @relation(fields: [userId], references: [id])
 }

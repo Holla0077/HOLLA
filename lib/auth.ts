@@ -1,42 +1,57 @@
-// FILE: lib/auth.ts
 import jwt from "jsonwebtoken";
-const SECRET = process.env.JWT_SECRET || "holla_super_secret_key_change_this";
 
-export type SessionTokenPayload = {
-  id: string;
-  email?: string;
-};
-
-export function signToken(payload: SessionTokenPayload) {
-  return jwt.sign(payload, SECRET, { expiresIn: "7d" });
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET environment variable is required in production");
+  }
+  return "buz_dev_secret_not_for_production";
 }
 
-export function verifyToken(token: string): SessionTokenPayload | null {
+export type Role = "CEO" | "MANAGER" | "WAITER";
+
+export type TokenPayload = {
+  id: string;
+  role: Role;
+};
+
+export function signToken(payload: TokenPayload): string {
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "12h" });
+}
+
+export function verifyToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, SECRET) as SessionTokenPayload;
+    return jwt.verify(token, getJwtSecret()) as TokenPayload;
   } catch {
     return null;
   }
 }
 
-/**
- * Reads auth token from cookies and returns the logged-in user's id.
- * IMPORTANT: update COOKIE_NAME if your app uses a different cookie name.
- */
-const COOKIE_NAME = "token"; // <-- change if your cookie is named differently
+export const COOKIE_NAME = "buz_session";
 
-export async function getAuthedUserId(req: Request): Promise<string> {
-  const cookieHeader = req.headers.get("cookie") || "";
-  const token = cookieHeader
+export function parseCookie(cookieHeader: string, name: string): string | undefined {
+  return cookieHeader
     .split(";")
     .map((c) => c.trim())
-    .find((c) => c.startsWith(`${COOKIE_NAME}=`))
-    ?.split("=")[1];
+    .find((c) => c.startsWith(`${name}=`))
+    ?.split("=")
+    .slice(1)
+    .join("=");
+}
 
-  if (!token) throw new Error("Unauthorized");
+export function getTokenFromRequest(req: Request): TokenPayload | null {
+  const cookieHeader = req.headers.get("cookie") || "";
+  const token = parseCookie(cookieHeader, COOKIE_NAME);
+  if (!token) return null;
+  return verifyToken(decodeURIComponent(token));
+}
 
-  const payload = verifyToken(decodeURIComponent(token));
-  if (!payload?.id) throw new Error("Unauthorized");
-
-  return payload.id;
+export function requireAuth(req: Request, allowedRoles?: Role[]): TokenPayload {
+  const payload = getTokenFromRequest(req);
+  if (!payload) throw new Error("Unauthorized");
+  if (allowedRoles && !allowedRoles.includes(payload.role)) {
+    throw new Error("Forbidden");
+  }
+  return payload;
 }
