@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
-import { verifyToken, COOKIE_NAME } from "@/lib/auth";
-import type { TokenPayload } from "@/lib/auth";
+import { verifyToken } from "@/lib/auth";
 
-export async function getSessionUser(): Promise<TokenPayload | null> {
+export async function getSessionUser() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const token = cookieStore.get("holla_session")?.value;
   if (!token) return null;
-  return verifyToken(token);
+  const payload = verifyToken(token);
+  if (!payload) return null;
+  return { id: payload.id };
 }

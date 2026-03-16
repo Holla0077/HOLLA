@@ -1,64 +1,63 @@
-# BUZ POS — Nightclub Point of Sale System
+# Holla - Digital Wallet App
 
 ## Overview
-A Next.js 16 LAN-first Nightclub POS and Inventory system supporting three roles (CEO, MANAGER, WAITER) with product management, order taking, payment processing, stock tracking, reporting, and user management.
+A Next.js 16 digital wallet application with support for fiat (GHS) and crypto assets, mobile money top-ups/withdrawals (MTN MoMo), internal Holla-to-Holla transfers, and a support chat system. Blue-black background with emerald accent theme.
 
 ## Architecture
 - **Framework**: Next.js 16 (App Router) with TypeScript
 - **Database**: PostgreSQL via Prisma ORM
-- **Auth**: JWT-based sessions stored in `buz_session` HTTP-only cookie
+- **Auth**: JWT-based sessions stored in `holla_session` HTTP-only cookie
 - **Styling**: Tailwind CSS v4
-- **Money**: All monetary values in pesewas (integer minor units, 1 GHS = 100 pesewas)
 
 ## Key Structure
 - `app/` — Next.js App Router pages and API routes
-  - `app/api/login` — POST login (username + credential)
-  - `app/api/logout` — POST logout
-  - `app/api/me` — GET current user
-  - `app/api/products` — GET/POST/PUT product CRUD (CEO/MANAGER for writes)
-  - `app/api/stock-in` — POST add stock (CEO/MANAGER)
-  - `app/api/orders` — GET/POST orders
-  - `app/api/orders/[id]` — GET/POST(add item)/DELETE(remove item) order items
-  - `app/api/orders/[id]/pay` — POST pay order (validates stock)
-  - `app/api/orders/[id]/void` — POST void paid order (CEO/MANAGER)
-  - `app/api/reports` — GET today's report (CEO/MANAGER)
-  - `app/api/users` — GET/POST/PUT user management (CEO only)
-  - `app/login/` — Login page
-  - `app/pos/` — POS page (product grid, open orders)
-  - `app/pos/order/[id]/` — Order edit view with pay button
-  - `app/manager/dashboard/` — Today's sales dashboard (auto-polls every 5s)
-  - `app/manager/products/` — Product CRUD table with modals
-  - `app/manager/stock-in/` — Stock-in form
-  - `app/ceo/users/` — User management (CEO only)
-- `components/TopBar.tsx` — Shared nav bar with role-aware links
-- `lib/auth.ts` — JWT sign/verify, requireAuth helper
-- `lib/auth.server.ts` — Server-only cookie reader
-- `lib/session.ts` — getSessionUser helper
-- `lib/prisma.ts` — Prisma client singleton
-- `middleware.ts` — Route protection by role
-- `prisma/schema.prisma` — Database models
-- `prisma/seed.ts` — Seed CEO user + demo products
-
-## Roles
-- **CEO**: Full access to all routes and data
-- **MANAGER**: Access to /pos and /manager/* routes
-- **WAITER**: Access to /pos only; costPrice and profit fields are stripped from API responses
+  - `app/api/` — Server-side API routes:
+    - `login` / `logout` / `signup` — Auth
+    - `me` — Profile GET + PATCH (fullName, username, gender, dob)
+    - `me/password` — Change password (POST)
+    - `me/phones` — Update primary phone (POST)
+    - `wallets` — List user wallets (GET)
+    - `transactions` — List transactions (GET) + Holla-to-Holla send (POST)
+    - `topup/momo` — MoMo top-up (POST) — requires `isVerified=true`
+    - `withdraw/momo` — MoMo withdraw (POST) — requires `isVerified=true`, deducts balance
+    - `support/conversations` + `support/messages` — Support chat
+  - `app/app/` — Authenticated app pages (home, activity, send-receive/cash, settings, help)
+  - `app/login/`, `app/signup/` — Auth pages
+- `lib/` — Shared server utilities
+  - `auth.ts` — JWT sign/verify, `getAuthedUserId`
+  - `auth.server.ts` — Server-only cookie reader (uses `holla_session` cookie)
+  - `session.ts` — `getSessionUser()` helper (uses `holla_session` cookie)
+  - `prisma.ts` — Prisma client singleton
+  - `bootstrap.ts` — Core asset and wallet creation on signup
+- `prisma/` — Database schema and migrations
 
 ## Cookie Name
-All auth uses cookie: `buz_session`
+All auth uses cookie: `holla_session`
 
-## Default Login
-- Username: `ceo`, Password: `ChangeMe123!`
+## Verification Gating
+`topup/momo`, `withdraw/momo`, and `transactions` POST all require:
+- `user.isVerified === true`
+- `user.fullName` is set
+
+Users see a clear error directing them to Settings if not verified.
 
 ## Environment Variables Required
-- `DATABASE_URL` — PostgreSQL connection string
-- `JWT_SECRET` — Secret key for signing JWT tokens
+- `DATABASE_URL` — PostgreSQL connection string (set automatically by Replit)
+- `JWT_SECRET` — Secret key for signing JWT tokens (should be set in Secrets)
 
 ## Running on Replit
 - Dev server: `npm run dev` (port 5000, bound to 0.0.0.0)
 - The workflow "Start application" runs `npm run dev` automatically
-- Seed: `npx prisma db seed` or `npx ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed.ts`
 
-## Docker Compose
-- `docker-compose.yml` included for LAN deployment (postgres + app on port 3000)
-- `Dockerfile` included for building the production image
+## Database
+- Migrations are in `prisma/migrations/`
+- After code changes: `npx prisma generate` (already done)
+- To apply new migrations: `npx prisma migrate deploy`
+
+## Security Notes
+- JWT_SECRET defaults to a hardcoded value — set a strong secret in Secrets
+- Session cookies are HTTP-only, read server-side only
+- Verification gating prevents unverified users from transacting
+
+## BUZ POS (Separate Project)
+A separate Nightclub POS system that was accidentally merged into this workspace is now isolated under `/buzpos/`. It is self-contained and can be moved into its own Replit project. It has no connection to the HOLLA codebase. Do not import from or modify `/buzpos/` when working on HOLLA.

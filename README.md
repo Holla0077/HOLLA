@@ -1,77 +1,36 @@
-# BUZ POS — Nightclub Point of Sale System
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A LAN-first Nightclub POS and Inventory system supporting three roles (CEO, MANAGER, WAITER) with product management, order taking, payment processing, stock tracking, and reporting.
+## Getting Started
 
-## Features
-
-- **Role-based access**: CEO, MANAGER, WAITER with server-side enforcement
-- **POS**: Product search, order creation, item management, payment with stock validation
-- **Inventory**: Stock-in with cost price updates, low-stock alerts
-- **Reports**: Today's sales, profit, order count (auto-refreshing dashboard)
-- **User Management**: CEO can create/deactivate users, reset credentials
-- **Void Orders**: CEO/MANAGER can void paid orders with stock reversal and audit logging
-
-## Local Development
-
-### Prerequisites
-- Node.js 20+
-- PostgreSQL database
-
-### Setup
+First, run the development server:
 
 ```bash
-# Install dependencies
-npm install
-
-# Set environment variables
-export DATABASE_URL="postgresql://user:password@localhost:5432/buzpos"
-export JWT_SECRET="your_secret_key"
-
-# Run migrations
-npx prisma migrate dev
-
-# Seed the database
-npx prisma db seed
-
-# Start development server
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-The app will be available at `http://localhost:5000`.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Default Login
-- **Username**: `ceo`
-- **Password**: `ChangeMe123!`
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## Docker Compose (LAN Deployment)
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-```bash
-# Start services
-docker compose up -d
+## Learn More
 
-# Run migrations and seed
-docker compose exec app npx prisma migrate deploy
-docker compose exec app npx prisma db seed
+To learn more about Next.js, take a look at the following resources:
 
-# Access at http://localhost:3000
-```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## Money Format
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-All monetary values are stored in **pesewas** (minor units). 1 GHS = 100 pesewas.
+## Deploy on Vercel
 
-## API Overview
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-| Endpoint | Methods | Access |
-|---|---|---|
-| `/api/login` | POST | Public |
-| `/api/logout` | POST | All |
-| `/api/me` | GET | All |
-| `/api/products` | GET, POST, PUT | GET: All, POST/PUT: CEO/MANAGER |
-| `/api/stock-in` | POST | CEO/MANAGER |
-| `/api/orders` | GET, POST | All |
-| `/api/orders/[id]` | GET, POST, DELETE | All |
-| `/api/orders/[id]/pay` | POST | All |
-| `/api/orders/[id]/void` | POST | CEO/MANAGER |
-| `/api/reports` | GET | CEO/MANAGER |
-| `/api/users` | GET, POST, PUT | CEO only |
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
