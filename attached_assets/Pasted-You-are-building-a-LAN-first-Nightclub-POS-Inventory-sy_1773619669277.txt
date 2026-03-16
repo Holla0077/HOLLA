@@ -1,0 +1,86 @@
+You are building a LAN-first Nightclub POS + Inventory system called “BUZ POS”.
+
+Tech stack (must follow):
+- Next.js 14+ (App Router) + TypeScript
+- TailwindCSS
+- PostgreSQL
+- Prisma ORM
+- Role-based auth using JWT in httpOnly cookie (no third-party auth)
+- Docker Compose for local deployment (app + db)
+
+Core requirements:
+1) Roles:
+   - CEO (full access + can edit history via void/corrections + audit log)
+   - MANAGER (financial access + void/corrections + audit log)
+   - WAITER (POS only; must NOT see cost price, profit, daily totals)
+
+2) Products:
+   - name, category (default “Drinks”), unit
+   - costPrice (hidden from WAITER UI and WAITER APIs)
+   - sellPrice
+   - stockQty
+   - lowStockLimit (alert when stockQty <= limit)
+   - isActive
+
+3) POS / Orders:
+   - Waiter can create OPEN order, add/remove items freely while OPEN
+   - On PAY: enforce no negative stock (block if insufficient)
+   - On PAY: decrement stock and create StockMovement entries
+   - Store snapshots at sale time: sellPriceAtTime, costPriceAtTime
+   - Store computed lineRevenue, lineProfit on each OrderItem
+   - Store totalRevenue, totalProfit on Order for fast reporting
+   - Real-time profit: dashboard updates immediately after paid orders (poll every 5s is OK)
+
+4) Stock movements:
+   - types: STOCK_IN, SALE, ADJUSTMENT, VOID_REVERSAL
+   - record qtyChange (+/-), productId, relatedOrderId (nullable), createdBy, note, timestamp
+
+5) History editing (CEO/MANAGER only):
+   - Implement “VOID paid order” (with reason), which reverses stock via VOID_REVERSAL and sets order status to VOID; keep audit log.
+   - Do NOT allow silent deletion. All actions must be auditable.
+
+6) Reports (CEO/MANAGER only):
+   - Today totals: total sales, total profit, count paid orders
+   - Low stock list
+   - Optional: sales by product and by waiter (basic)
+
+7) User management (CEO only):
+   - Create users: WAITER uses PIN (4-10 digits), MANAGER/CEO uses password
+   - Activate/deactivate users
+   - Reset waiter PIN / manager password
+   - Prevent deactivating the last active CEO
+
+8) UX pages:
+   - /login
+   - /pos (product search, new order)
+   - /pos/order/[id] (edit open order, pay)
+   - /manager/dashboard (totals/profit + low stock)
+   - /manager/products (CRUD; show cost only to manager/CEO)
+   - /manager/stock-in (add stock and optionally update cost price)
+   - /ceo/users
+
+9) Security rules:
+   - All API routes must check role permissions server-side.
+   - WAITER endpoints must never return costPrice or profit.
+   - Use integer money in minor units (GHS pesewas): 12.50 -> 1250
+
+10) Local deployment:
+   - Provide docker-compose.yml with postgres + app
+   - App runs on port 3000 and must be reachable on LAN by server IP
+
+Implementation steps you must perform:
+- Create the Next.js project with Tailwind + TS (App Router).
+- Set up Prisma schema models: User, Product, Order, OrderItem, StockMovement, AuditLog with the enums.
+- Implement auth helpers, middleware route protection, and cookie sessions.
+- Build all API routes (products, orders, pay, void, stock-in, reports/today, users).
+- Build all UI pages with basic, clean Tailwind layout.
+- Add a TopBar with role-based navigation + logout.
+- Include a seed script that creates an initial CEO account (username: ceo, password: ChangeMe123!).
+- Write a short README with run instructions for local dev and docker compose.
+
+Deliverables:
+- Working app in Replit with Postgres configured (or Replit database equivalent if Postgres addon).
+- All pages navigable.
+- Demo data optional (a few products).
+
+Important: Keep it nightclub-only (drinks/items). No restaurant ingredient tracking.
