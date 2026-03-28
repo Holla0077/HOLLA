@@ -1,27 +1,41 @@
 /**
- * MTN Mobile Money (MoMo) API client — Ghana Production
+ * MTN Mobile Money (MoMo) API client — Ghana Production + Sandbox
  *
- * Products used:
- *   - Collections (Payments V1): charge a customer's MoMo wallet → funds arrive in your merchant account
- *   - Disbursements (MoMo Withdrawals V1): push funds from your merchant account → customer's MoMo wallet
+ * All env vars are read at call time (not module init) so secrets
+ * updated via the Replit dashboard take effect without redeployment.
  *
- * Docs: https://momodeveloper.mtn.com/docs
+ * Sandbox quirks:
+ *   - BASE_URL : https://sandbox.momodeveloper.mtn.com
+ *   - TARGET_ENV: sandbox
+ *   - currency  : EUR  (sandbox does not support GHS)
+ *   - test MSISDN: any number — use the customer's real phone
  *
- * To add a new network (Telecel, AT) later, create a separate service instance
- * pointing at their API — the interface and flow are identical.
+ * Production (Ghana):
+ *   - BASE_URL : https://proxy.momoapi.mtn.com
+ *   - TARGET_ENV: mtn-gh
+ *   - currency  : GHS
  */
 
 import { v4 as uuidv4 } from "uuid";
 
-const BASE_URL = process.env.MTN_MOMO_BASE_URL || "https://proxy.momoapi.mtn.com";
-const TARGET_ENV = process.env.MTN_MOMO_ENV || "mtnghana";
-const CONSUMER_KEY = process.env.MTN_CONSUMER_KEY || "";
-const CONSUMER_SECRET = process.env.MTN_CONSUMER_SECRET || "";
-const COLLECTION_KEY = process.env.MTN_COLLECTION_KEY || "";
-const DISBURSEMENT_KEY = process.env.MTN_DISBURSEMENT_KEY || "";
+function cfg() {
+  return {
+    BASE_URL: process.env.MTN_MOMO_BASE_URL || "https://sandbox.momodeveloper.mtn.com",
+    TARGET_ENV: process.env.MTN_MOMO_ENV || "sandbox",
+    CONSUMER_KEY: process.env.MTN_CONSUMER_KEY || "",
+    CONSUMER_SECRET: process.env.MTN_CONSUMER_SECRET || "",
+    COLLECTION_KEY: process.env.MTN_COLLECTION_KEY || "",
+    DISBURSEMENT_KEY: process.env.MTN_DISBURSEMENT_KEY || "",
+  };
+}
 
-// MTN uses GHS amounts as full decimal strings (e.g. "10.00"), not minor units
-function pesewasToGhs(pesewas: bigint): string {
+/** In sandbox the API only accepts EUR; production uses GHS */
+function apiCurrency(): string {
+  const env = (process.env.MTN_MOMO_ENV || "sandbox").toLowerCase();
+  return env === "sandbox" ? "EUR" : "GHS";
+}
+
+function pesewasToAmount(pesewas: bigint): string {
   const n = Number(pesewas);
   return (n / 100).toFixed(2);
 }
@@ -29,6 +43,7 @@ function pesewasToGhs(pesewas: bigint): string {
 // ----- Token helpers -----
 
 async function getCollectionToken(): Promise<string> {
+  const { BASE_URL, TARGET_ENV, CONSUMER_KEY, CONSUMER_SECRET, COLLECTION_KEY } = cfg();
   const creds = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString("base64");
   const res = await fetch(`${BASE_URL}/collection/token/`, {
     method: "POST",
@@ -47,6 +62,7 @@ async function getCollectionToken(): Promise<string> {
 }
 
 async function getDisbursementToken(): Promise<string> {
+  const { BASE_URL, TARGET_ENV, CONSUMER_KEY, CONSUMER_SECRET, DISBURSEMENT_KEY } = cfg();
   const creds = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString("base64");
   const res = await fetch(`${BASE_URL}/disbursement/token/`, {
     method: "POST",
@@ -67,25 +83,20 @@ async function getDisbursementToken(): Promise<string> {
 // ----- Collections (Topup / Deposit) -----
 
 export type RequestToPayResult = {
-  referenceId: string; // UUID we generate — used to poll status
+  referenceId: string;
 };
 
-/**
- * Request To Pay — charge the customer's MoMo wallet.
- * MTN sends a USSD push to the customer's phone asking them to approve.
- * @param phone    Customer's phone number in international format e.g. "233244123456"
- * @param amountPesewas  Amount in pesewas (integer)
- * @param payerMessage  Short message shown on customer's phone
- */
 export async function requestToPay(
   phone: string,
   amountPesewas: bigint,
   payerMessage = "Holla top-up",
   callbackUrl?: string
 ): Promise<RequestToPayResult> {
+  const { BASE_URL, TARGET_ENV, COLLECTION_KEY } = cfg();
   const token = await getCollectionToken();
   const referenceId = uuidv4();
-  const amount = pesewasToGhs(amountPesewas);
+  const amount = pesewasToAmount(amountPesewas);
+  const currency = apiCurrency();
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
@@ -98,7 +109,7 @@ export async function requestToPay(
 
   const body = {
     amount,
-    currency: "GHS",
+    currency,
     externalId: referenceId,
     payer: {
       partyIdType: "MSISDN",
@@ -128,10 +139,8 @@ export type MoMoPaymentStatus = {
   financialTransactionId?: string;
 };
 
-/**
- * Poll the status of a requestToPay call.
- */
 export async function getCollectionStatus(referenceId: string): Promise<MoMoPaymentStatus> {
+  const { BASE_URL, TARGET_ENV, COLLECTION_KEY } = cfg();
   const token = await getCollectionToken();
   const res = await fetch(`${BASE_URL}/collection/v1_0/requesttopay/${referenceId}`, {
     headers: {
@@ -154,18 +163,17 @@ export async function getCollectionStatus(referenceId: string): Promise<MoMoPaym
 
 // ----- Disbursements (Withdraw / Cash-out) -----
 
-/**
- * Transfer funds from merchant account to the customer's MoMo wallet.
- */
 export async function transfer(
   phone: string,
   amountPesewas: bigint,
   payeeNote = "Holla withdrawal",
   callbackUrl?: string
 ): Promise<{ referenceId: string }> {
+  const { BASE_URL, TARGET_ENV, DISBURSEMENT_KEY } = cfg();
   const token = await getDisbursementToken();
   const referenceId = uuidv4();
-  const amount = pesewasToGhs(amountPesewas);
+  const amount = pesewasToAmount(amountPesewas);
+  const currency = apiCurrency();
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
@@ -178,7 +186,7 @@ export async function transfer(
 
   const body = {
     amount,
-    currency: "GHS",
+    currency,
     externalId: referenceId,
     payee: {
       partyIdType: "MSISDN",
@@ -202,10 +210,8 @@ export async function transfer(
   return { referenceId };
 }
 
-/**
- * Poll the status of a disbursement transfer.
- */
 export async function getDisbursementStatus(referenceId: string): Promise<MoMoPaymentStatus> {
+  const { BASE_URL, TARGET_ENV, DISBURSEMENT_KEY } = cfg();
   const token = await getDisbursementToken();
   const res = await fetch(`${BASE_URL}/disbursement/v1_0/transfer/${referenceId}`, {
     headers: {
@@ -228,10 +234,6 @@ export async function getDisbursementStatus(referenceId: string): Promise<MoMoPa
 
 // ----- Utilities -----
 
-/**
- * Normalize a Ghanaian phone number to international MSISDN format (no +).
- * Accepts: 024xxxxxxx, 0244xxxxxxx, +233244xxxxxxx, 233244xxxxxxx
- */
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("233")) return digits;

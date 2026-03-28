@@ -198,11 +198,18 @@ export default function HomePage() {
     }
   }
 
-  // 0) Load user verification status
+  // 0) Load user verification status — also refresh when tab regains focus so
+  //    the banner disappears immediately after admin approves without a full reload.
   useEffect(() => {
-    fetch("/api/me").then(r => r.ok ? r.json() : null).then(d => {
-      if (d?.user) setVerifyStatus(d.user.verificationStatus ?? "NONE");
-    }).catch(() => {});
+    function fetchStatus() {
+      fetch("/api/me").then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.user) setVerifyStatus(d.user.verificationStatus ?? "NONE");
+      }).catch(() => {});
+    }
+    fetchStatus();
+    function onVisible() { if (document.visibilityState === "visible") fetchStatus(); }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   // 1) Load wallets on mount

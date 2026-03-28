@@ -172,36 +172,33 @@ const toggleBase =
   <HollaLogo variant="icon" className="scale-[4.0]" />
 </Link>
 
-            {/* CENTER: CASH/CRYPTO toggle (INSIDE top bar, ABOVE divider line) */}
+            {/* CENTER: CASH/CRYPTO toggle — pill segment control */}
             {showTopToggle ? (
-              <div className="hidden md:flex items-center gap-5">
-                <Link
-                  href={`${toggleBase}?mode=cash`}
-                  className={[
-  "rounded-[20px] border px-8 py-2.5 text-[22px] leading-none tracking-wide",
-  mode === "cash"
-    ? "border-emerald-500 text-white"
-    : "border-slate-200/40 text-white/90 hover:border-slate-200/70",
-].join(" ")}
-                  style={{ fontFamily: "serif" }}
-                >
-                  CASH
-                </Link>
-
-                <div className="h-10 w-[3px] rounded-full bg-slate-200/70" />
-
-                <Link
-                  href={`${toggleBase}?mode=crypto`}
-                  className={[
-  "rounded-[20px] border px-8 py-2.5 text-[22px] leading-none tracking-wide",
-  mode === "crypto"
-    ? "border-emerald-500 text-white"
-    : "border-slate-200/40 text-white/90 hover:border-slate-200/70",
-].join(" ")}
-                  style={{ fontFamily: "serif" }}
-                >
-                  CRYPTO
-                </Link>
+              <div className="hidden md:flex items-center">
+                <div className="flex items-center rounded-2xl border border-white/[0.1] bg-white/[0.04] p-1 gap-0.5">
+                  <Link
+                    href={`${toggleBase}?mode=cash`}
+                    className={[
+                      "relative rounded-xl px-7 py-2 text-sm font-semibold tracking-wide transition-all duration-200",
+                      mode === "cash"
+                        ? "bg-emerald-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.35)]"
+                        : "text-white/60 hover:text-white/90",
+                    ].join(" ")}
+                  >
+                    CASH
+                  </Link>
+                  <Link
+                    href={`${toggleBase}?mode=crypto`}
+                    className={[
+                      "relative rounded-xl px-7 py-2 text-sm font-semibold tracking-wide transition-all duration-200",
+                      mode === "crypto"
+                        ? "bg-emerald-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.35)]"
+                        : "text-white/60 hover:text-white/90",
+                    ].join(" ")}
+                  >
+                    CRYPTO
+                  </Link>
+                </div>
               </div>
             ) : (
               <div />
