@@ -65,7 +65,7 @@ export default function LoginPage() {
               Email / Username
             </label>
             <input
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+              className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
@@ -77,7 +77,7 @@ export default function LoginPage() {
             <label className="block text-sm mb-1">Password</label>
             <div className="flex items-center gap-2">
               <input
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -86,7 +86,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="text-xs px-2 py-1 border border-slate-600 rounded-md hover:bg-slate-800"
+                className="text-xs px-2 py-1 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-100"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
