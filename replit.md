@@ -75,10 +75,24 @@ A Next.js 16 fintech app (KashBoy brand) for Ghana: digital wallets (GHS fiat + 
 
 Users see a clear error directing them to Settings if not verified.
 
+## MTN MoMo Integration
+- **Service**: `lib/mtn-momo.ts` — all MTN API calls live here (collections + disbursements)
+- **Collections (Deposits)**: `POST /api/topup/momo` → sends USSD push to customer → returns PENDING + referenceId → frontend polls `/api/topup/momo/status?ref=<referenceId>` every 5s → on SUCCESSFUL: credits wallet atomically
+- **Disbursements (Withdrawals)**: `POST /api/withdraw/momo` → deducts balance → calls MTN transfer → frontend polls `/api/withdraw/momo/status?ref=<referenceId>` → on FAILED: refunds balance automatically
+- **Non-MTN networks** (Telecel, AT Money): credited/debited instantly until their APIs are integrated (same modular pattern)
+- **Phone normalization**: `normalizePhone()` converts any Ghanaian format to MSISDN (233XXXXXXXXX)
+- **Adding a new network**: Create a new service in `lib/<network>-momo.ts` following the same interface (`requestToPay`, `transfer`, `getCollectionStatus`, `getDisbursementStatus`). Update `networkToMethod()` in the routes.
+
 ## Environment Variables Required
 - `DATABASE_URL` — PostgreSQL connection string (set automatically by Replit)
 - `JWT_SECRET` — Secret key for signing JWT tokens (set in Replit Secrets)
 - `ADMIN_PASSWORD` — Admin panel password (set in Replit Secrets)
+- `MTN_CONSUMER_KEY` — MTN Developer Portal app Consumer Key
+- `MTN_CONSUMER_SECRET` — MTN Developer Portal app Consumer Secret
+- `MTN_COLLECTION_KEY` — Subscription key for "Payments V1" product
+- `MTN_DISBURSEMENT_KEY` — Subscription key for "MoMo Withdrawals V1" product
+- `MTN_MOMO_BASE_URL` — MTN API base URL (default: https://proxy.momoapi.mtn.com)
+- `MTN_MOMO_ENV` — MTN target environment (default: mtnghana)
 
 ## Running on Replit
 - Dev server: `npm run dev` (port 5000, bound to 0.0.0.0)

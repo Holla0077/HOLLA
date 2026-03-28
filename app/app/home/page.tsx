@@ -157,6 +157,8 @@ export default function HomePage() {
   const [topupError, setTopupError] = useState<string | null>(null);
   const [topupBusy, setTopupBusy] = useState(false);
   const [topupOk, setTopupOk] = useState<string | null>(null);
+  const [topupPending, setTopupPending] = useState<string | null>(null); // referenceId while polling
+  const [topupPendingMsg, setTopupPendingMsg] = useState<string | null>(null);
 
   // Withdraw form
   const [withdrawTab, setWithdrawTab] = useState<"MOMO" | "CARD">("MOMO");
@@ -169,6 +171,7 @@ export default function HomePage() {
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawBusy, setWithdrawBusy] = useState(false);
   const [withdrawOk, setWithdrawOk] = useState<string | null>(null);
+  const [withdrawPending, setWithdrawPending] = useState<string | null>(null); // referenceId while polling
 
   // Buy/Sell
   const [tradeAmountCrypto, setTradeAmountCrypto] = useState("");
@@ -642,12 +645,25 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                 </div>
               )}
 
+              {/* Pending MTN approval banner */}
+              {topupPending && (
+                <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-sm text-blue-200 flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span>{topupPendingMsg || "Waiting for approval on your phone…"}</span>
+                </div>
+              )}
+
               <button
-                disabled={topupBusy}
+                disabled={topupBusy || !!topupPending}
                 className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
                 onClick={async () => {
                   setTopupError(null);
                   setTopupOk(null);
+                  setTopupPending(null);
+                  setTopupPendingMsg(null);
                   if (!topupAmount || Number(topupAmount) <= 0) { setTopupError("Enter a valid amount."); return; }
                   if (!selected) { setTopupError("No wallet selected."); return; }
                   setTopupBusy(true);
@@ -680,10 +696,48 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                     }
                     const data = await res.json();
                     if (!res.ok) { setTopupError(data?.error || "Top up failed."); return; }
-                    setTopupOk(fundMethod === "MOMO"
+
+                    if (data.status === "PENDING" && data.referenceId) {
+                      // MTN live flow — poll until approved/failed
+                      setTopupBusy(false);
+                      setTopupPending(data.referenceId);
+                      setTopupPendingMsg(data.message || "Check your phone and approve the MTN MoMo request.");
+
+                      const poll = async () => {
+                        let attempts = 0;
+                        const maxAttempts = 30; // poll for ~2.5 min
+                        const intervalId = setInterval(async () => {
+                          attempts++;
+                          try {
+                            const sr = await fetch(`/api/topup/momo/status?ref=${data.referenceId}`);
+                            const sd = await sr.json();
+                            if (sd.status === "COMPLETED") {
+                              clearInterval(intervalId);
+                              setTopupPending(null);
+                              setTopupPendingMsg(null);
+                              setTopupOk(sd.message || `GH₵ ${topupAmount} credited to your wallet.`);
+                              setTopupAmount(""); setTopupPhone("");
+                              await loadWallets();
+                            } else if (sd.status === "FAILED" || attempts >= maxAttempts) {
+                              clearInterval(intervalId);
+                              setTopupPending(null);
+                              setTopupPendingMsg(null);
+                              setTopupError(sd.message || "Payment timed out. Please try again.");
+                            } else {
+                              setTopupPendingMsg(sd.message || "Waiting for approval on your phone…");
+                            }
+                          } catch { /* keep polling */ }
+                        }, 5000);
+                      };
+                      poll();
+                      return;
+                    }
+
+                    // Instant credit (non-MTN or fallback)
+                    setTopupOk(data.message || (fundMethod === "MOMO"
                       ? `GH₵ ${topupAmount} credited to your wallet via ${topupNetwork} MoMo.`
                       : `GH₵ ${topupAmount} credited to your wallet via card ending ${topupCardNumber.slice(-4)}.`
-                    );
+                    ));
                     setTopupAmount("");
                     setTopupPhone("");
                     setTopupCardNumber("");
@@ -698,7 +752,7 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                   }
                 }}
               >
-                {topupBusy ? "Processing…" : `Fund Wallet — GH₵ ${topupAmount || "0"}`}
+                {topupBusy ? "Processing…" : topupPending ? "Awaiting approval…" : `Fund Wallet — GH₵ ${topupAmount || "0"}`}
               </button>
             </div>
           </div>
@@ -842,12 +896,23 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                   {withdrawOk}
                 </div>
               )}
+              {withdrawPending && (
+                <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-sm text-blue-200 flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span>Processing withdrawal — please wait…</span>
+                </div>
+              )}
+
               <button
-                disabled={withdrawBusy}
+                disabled={withdrawBusy || !!withdrawPending}
                 className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
                 onClick={async () => {
                   setWithdrawError(null);
                   setWithdrawOk(null);
+                  setWithdrawPending(null);
                   if (!withdrawAmount || Number(withdrawAmount) <= 0) { setWithdrawError("Enter a valid amount."); return; }
                   if (!selected) { setWithdrawError("No wallet selected."); return; }
                   setWithdrawBusy(true);
@@ -878,10 +943,42 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                     }
                     const data = await res.json();
                     if (!res.ok) { setWithdrawError(data?.error || "Withdraw failed."); return; }
-                    setWithdrawOk(withdrawTab === "MOMO"
+
+                    // MTN live — poll until sent or failed
+                    if (data.status === "PENDING" && data.referenceId) {
+                      setWithdrawBusy(false);
+                      setWithdrawPending(data.referenceId);
+                      const poll = async () => {
+                        let attempts = 0;
+                        const maxAttempts = 30;
+                        const intervalId = setInterval(async () => {
+                          attempts++;
+                          try {
+                            const sr = await fetch(`/api/withdraw/momo/status?ref=${data.referenceId}`);
+                            const sd = await sr.json();
+                            if (sd.status === "COMPLETED") {
+                              clearInterval(intervalId);
+                              setWithdrawPending(null);
+                              setWithdrawOk(sd.message || "Withdrawal completed.");
+                              setWithdrawAmount(""); setWithdrawPhone("");
+                              await loadWallets();
+                            } else if (sd.status === "FAILED" || attempts >= maxAttempts) {
+                              clearInterval(intervalId);
+                              setWithdrawPending(null);
+                              setWithdrawError(sd.message || "Withdrawal failed. Your balance has been refunded.");
+                              await loadWallets();
+                            }
+                          } catch { /* keep polling */ }
+                        }, 5000);
+                      };
+                      poll();
+                      return;
+                    }
+
+                    setWithdrawOk(data.message || (withdrawTab === "MOMO"
                       ? `GH₵ ${withdrawAmount} withdrawal submitted via ${withdrawNetwork} MoMo. Funds will arrive shortly.`
                       : `GH₵ ${withdrawAmount} withdrawal submitted to card ending ${withdrawCardNumber.slice(-4)}. Funds will arrive in 1–3 business days.`
-                    );
+                    ));
                     setWithdrawAmount("");
                     setWithdrawPhone("");
                     setWithdrawCardNumber("");

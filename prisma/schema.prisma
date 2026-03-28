@@ -67,7 +67,8 @@ model User {
 
   wallets      Wallet[]
   transactions Transaction[] @relation("UserTransactions")
-  topupRequests TopupRequest[]
+  topupRequests    TopupRequest[]
+  withdrawRequests WithdrawRequest[]
 
   isVerified         Boolean            @default(false)
   verifiedAt         DateTime?
@@ -133,6 +134,7 @@ model Wallet {
   transactionsTo   Transaction[] @relation("ToWallet")
   ledgerEntries    LedgerEntry[]
   topupRequests    TopupRequest[]
+  withdrawRequests WithdrawRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -141,19 +143,41 @@ model Wallet {
 }
 
 model TopupRequest {
-  id        String   @id @default(cuid())
-  userId    String
-  walletId  String
-  amount    BigInt   // store in pesewas (GHS * 100)
-  phone     String
-  network   String   // "MTN" | "VODAFONE" | "AIRTELTIGO"
-  status    String   @default("PENDING") // PENDING | COMPLETED | FAILED | CANCELED
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String
+  walletId    String
+  amount      BigInt   // store in pesewas (GHS * 100)
+  phone       String
+  network     String   // "MTN" | "TELECEL" | "AT"
+  status      String   @default("PENDING") // PENDING | COMPLETED | FAILED | CANCELED
+  externalRef String?  // MTN referenceId (UUID) sent to MoMo API
+  providerStatus String? // raw status from MTN callback / poll: SUCCESSFUL | FAILED | PENDING
+  failureReason  String? // reason text if failed
+  transactionId  String? // linked Transaction record id
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // relations (adjust to your existing User/Wallet models)
   user      User     @relation(fields: [userId], references: [id])
   wallet    Wallet   @relation(fields: [walletId], references: [id])
+}
+
+model WithdrawRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  walletId    String
+  amount      BigInt   // pesewas
+  phone       String
+  network     String
+  status      String   @default("PENDING") // PENDING | COMPLETED | FAILED
+  externalRef String?  // MTN referenceId
+  providerStatus String?
+  failureReason  String?
+  transactionId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
 }
 
 model Transaction {
