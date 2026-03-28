@@ -41,5 +41,5 @@ timeoutMs = 120000
 [userenv]
 
 [userenv.shared]
-MTN_MOMO_ENV = "mtnghana"
-MTN_MOMO_BASE_URL = "https://proxy.momoapi.mtn.com"
+MTN_MOMO_ENV = "sandbox"
+MTN_MOMO_BASE_URL = "https://sandbox.momodeveloper.mtn.com"
