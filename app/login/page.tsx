@@ -108,9 +108,9 @@ export default function LoginPage() {
 </button>
         </form>
         <div className="text-center mt-4">
-          <button type="button" className="text-sm text-emerald-600 hover:underline">
-            Having trouble logging in?
-          </button>
+          <Link href="/forgot-password" className="text-sm text-emerald-600 hover:underline">
+            Forgot password?
+          </Link>
         </div>
         {/* Divider */}
         <div className="my-5 flex items-center gap-3">

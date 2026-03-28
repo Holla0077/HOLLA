@@ -126,7 +126,10 @@ export default function SignupPage() {
                 onChange={(e) => setAcceptTerms(e.target.checked)}
               />
               <span>
-                I agree to the HOLLA terms & privacy policy.
+                I agree to the{" "}
+                <Link href="/terms" target="_blank" className="text-emerald-600 underline hover:text-emerald-700">Terms of Service</Link>
+                {" "}and{" "}
+                <Link href="/privacy" target="_blank" className="text-emerald-600 underline hover:text-emerald-700">Privacy Policy</Link>.
               </span>
             </label>
 
