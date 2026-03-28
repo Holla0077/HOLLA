@@ -1,22 +1,24 @@
 # Holla - Digital Wallet App
 
 ## Overview
-A Next.js 16 fintech app (KashBoy brand) for Ghana: digital wallets (GHS fiat + crypto), MoMo and Visa/card funding and withdrawal, internal Holla-to-Holla transfers, activity log, support chat, and user settings. Blue-black `#070B1A` background with emerald accent theme.
+A Next.js 16 fintech app (KashBoy brand) for Ghana: digital wallets (GHS fiat + crypto), MoMo and Visa/card funding and withdrawal, internal Holla-to-Holla transfers, activity log, support chat, user settings, and KYC identity verification. Blue-black `#070B1A` background with emerald accent theme.
 
 ## Architecture
 - **Framework**: Next.js 16 (App Router) with TypeScript
 - **Database**: PostgreSQL via Prisma ORM
 - **Auth**: JWT-based sessions stored in `holla_session` HTTP-only cookie
+- **Admin auth**: Separate `holla_admin_session` cookie with admin JWT
 - **Styling**: Tailwind CSS v4
 
 ## Key Structure
 - `app/` — Next.js App Router pages and API routes
   - `app/api/` — Server-side API routes:
     - `login` / `logout` / `signup` — Auth
-    - `me` — Profile GET + PATCH (fullName, username, gender, dob)
+    - `me` — Profile GET + PATCH (fullName, username, gender, dob, verificationStatus)
     - `me/password` — Change password (POST)
     - `me/phones` — Update primary phone (POST)
-    - `me/verify-request` — Verification request (POST)
+    - `me/kyc` — Submit Ghana Card images for KYC (GET status, POST front+back upload)
+    - `kyc-image/[userId]/[filename]` — Admin-only secure KYC image serving (outside public dir)
     - `wallets` — List user wallets (GET)
     - `transactions` — List transactions (GET) + Holla-to-Holla send (POST, atomic)
     - `topup/momo` — MoMo deposit (POST) — credits wallet immediately, requires `isVerified=true`
@@ -24,18 +26,47 @@ A Next.js 16 fintech app (KashBoy brand) for Ghana: digital wallets (GHS fiat + 
     - `withdraw/momo` — MoMo withdrawal (POST) — atomic balance deduct, requires `isVerified=true`
     - `withdraw/card` — Visa/card withdrawal (POST) — atomic balance deduct, requires `isVerified=true`
     - `support/conversations` + `support/messages` — Support chat
+    - `admin/users` — List users (GET), toggle verify (PATCH)
+    - `admin/users/[id]` — Full user profile + wallets + transactions (GET)
+    - `admin/kyc` — KYC queue (GET), approve/reject (PATCH)
+    - `admin/support` / `admin/support/reply` — Support management
+    - `admin/impersonate` — Start admin impersonation session (POST)
+    - `admin/exit-impersonate` — End impersonation, return to admin (POST)
+    - `admin/audit` — Audit log (GET)
   - `app/app/` — Authenticated app pages (home, activity, send-receive/cash, settings, help)
   - `app/login/`, `app/signup/` — Auth pages
+  - `app/admin/` — Admin panel (login + dashboard)
 - `lib/` — Shared server utilities
-  - `auth.ts` — JWT sign/verify, `getAuthedUserId`
-  - `auth.server.ts` — Server-only cookie reader (uses `holla_session` cookie)
-  - `session.ts` — `getSessionUser()` helper (uses `holla_session` cookie)
+  - `auth.ts` — JWT sign/verify, SessionTokenPayload (includes `impersonated` flag)
+  - `session.ts` — `getSessionUser()` helper (id + impersonated flag)
+  - `admin-auth.ts` — Admin JWT sign/verify, `getAdminSession()`
+  - `audit.ts` — `auditLog(action, targetUserId, meta)` helper
   - `prisma.ts` — Prisma client singleton
   - `bootstrap.ts` — Core asset and wallet creation on signup
+- `kyc-uploads/` — KYC document storage (outside public dir; served via API only)
 - `prisma/` — Database schema and migrations
 
-## Cookie Name
-All auth uses cookie: `holla_session`
+## Cookie Names
+- User session: `holla_session`
+- Admin session: `holla_admin_session`
+
+## KYC / Verification Flow
+1. User clicks "Get Verified" in Settings → modal opens
+2. User uploads Ghana Card front + back (images stored in `kyc-uploads/{userId}/`)
+3. User.verificationStatus → PENDING, KycDocument record created
+4. Admin reviews in `/admin/dashboard` → Verification tab
+5. Admin approves → isVerified=true, verificationStatus=APPROVED
+6. Admin rejects → verificationStatus=REJECTED (user can resubmit)
+7. Home page shows yellow banner (unverified/rejected) or blue banner (pending review)
+8. Settings page shows status-contextual banner + "Get Verified" / "Submitted" button
+
+## Admin Panel
+- URL: `/admin` (login), `/admin/dashboard` (dashboard)
+- Tabs: Users | Verification | Support | Audit Log
+- Click any user row → opens detail slide panel (wallets, txns, "Act as" impersonation)
+- Impersonation: admin POSTs to `/api/admin/impersonate` → sets holla_session cookie with `impersonated: true`
+- Orange banner shown in app layout when impersonating, with Exit button
+- All KYC approvals, rejections, and impersonation actions are audit-logged
 
 ## Verification Gating
 `topup/momo`, `withdraw/momo`, and `transactions` POST all require:
@@ -46,7 +77,8 @@ Users see a clear error directing them to Settings if not verified.
 
 ## Environment Variables Required
 - `DATABASE_URL` — PostgreSQL connection string (set automatically by Replit)
-- `JWT_SECRET` — Secret key for signing JWT tokens (should be set in Secrets)
+- `JWT_SECRET` — Secret key for signing JWT tokens (set in Replit Secrets)
+- `ADMIN_PASSWORD` — Admin panel password (set in Replit Secrets)
 
 ## Running on Replit
 - Dev server: `npm run dev` (port 5000, bound to 0.0.0.0)
@@ -56,11 +88,14 @@ Users see a clear error directing them to Settings if not verified.
 - Migrations are in `prisma/migrations/`
 - After code changes: `npx prisma generate` (already done)
 - To apply new migrations: `npx prisma migrate deploy`
+- Key models: User, Wallet, Asset, Transaction, SupportConversation, SupportMessage, KycDocument, AdminAuditLog
 
 ## Security Notes
 - JWT_SECRET defaults to a hardcoded value — set a strong secret in Secrets
 - Session cookies are HTTP-only, read server-side only
-- Verification gating prevents unverified users from transacting
+- KYC images served via admin-only API route (not publicly accessible)
+- Impersonation is time-limited (2h) and audit-logged
+- All admin actions go through `getAdminSession()` check
 
 ## BUZ POS (Separate Project)
 A separate Nightclub POS system that was accidentally merged into this workspace is now isolated under `/buzpos/`. It is self-contained and can be moved into its own Replit project. It has no connection to the HOLLA codebase. Do not import from or modify `/buzpos/` when working on HOLLA.

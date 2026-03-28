@@ -104,6 +104,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const mode = (sp.get("mode") || "cash").toLowerCase() === "crypto" ? "crypto" : "cash";
 
   const [userInitials, setUserInitials] = useState("ME");
+  const [impersonated, setImpersonated] = useState(false);
+  const [impersonatedUsername, setImpersonatedUsername] = useState("");
 
   useEffect(() => {
     fetch("/api/me")
@@ -120,9 +122,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         } else if (u.username) {
           setUserInitials((u.username as string).slice(0, 2).toUpperCase());
         }
+        if (d.impersonated) {
+          setImpersonated(true);
+          setImpersonatedUsername(u.username || u.email || "user");
+        }
       })
       .catch(() => {});
   }, []);
+
+  async function exitImpersonation() {
+    await fetch("/api/admin/exit-impersonate", { method: "POST" });
+    router.push("/admin/dashboard");
+  }
 
   async function handleLogout() {
     try {
@@ -236,6 +247,22 @@ const toggleBase =
           <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200/30 to-transparent" />
         </div>
       </header>
+
+      {/* IMPERSONATION BANNER */}
+      {impersonated && (
+        <div className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between bg-orange-500 px-6 py-2 text-sm font-semibold text-white shadow-lg" style={{ marginTop: HEADER_H }}>
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Admin view — acting as <strong>@{impersonatedUsername}</strong>
+          </div>
+          <button onClick={exitImpersonation} className="rounded-lg border border-white/30 px-3 py-1 text-xs hover:bg-white/10 transition-colors">
+            Exit
+          </button>
+        </div>
+      )}
 
       {/* FIXED SIDEBAR */}
       <aside

@@ -18,6 +18,7 @@ export async function GET() {
       fullName: true,
       isVerified: true,
       verifiedAt: true,
+      verificationStatus: true,
       createdAt: true,
       _count: { select: { transactions: true } },
     },

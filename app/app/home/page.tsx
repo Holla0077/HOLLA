@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { WalletCard, formatWalletBalance } from "@/app/app/_components/WalletCard";
 
@@ -124,8 +124,11 @@ function formatFiatFromMinorUnits(balanceStr: string, currency = "GH₵") {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const sp = useSearchParams();
   const mode = (sp.get("mode") || "cash").toLowerCase() === "crypto" ? "crypto" : "cash";
+
+  const [verifyStatus, setVerifyStatus] = useState<string | null>(null);
 
   const [wallets, setWallets] = useState<UiWallet[]>([]);
   const [walletsLoading, setWalletsLoading] = useState(true);
@@ -191,6 +194,13 @@ export default function HomePage() {
       if (showSpinner) setWalletsLoading(false);
     }
   }
+
+  // 0) Load user verification status
+  useEffect(() => {
+    fetch("/api/me").then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.user) setVerifyStatus(d.user.verificationStatus ?? "NONE");
+    }).catch(() => {});
+  }, []);
 
   // 1) Load wallets on mount
   useEffect(() => {
@@ -260,10 +270,46 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
 
   // SUMMARY PAGE FONT: make this page modern (keep layout’s serif areas intact)
   // This only affects content rendered inside this page.
+  const showVerifyBanner = verifyStatus === "NONE" || verifyStatus === "REJECTED";
+
   return (
   <div className="relative font-sans">
 
-    
+    {/* VERIFY ACCOUNT BANNER */}
+    {showVerifyBanner && (
+      <button
+        onClick={() => router.push("/app/settings#verification")}
+        className="w-full mb-4 flex items-center justify-between gap-3 rounded-[16px] border border-yellow-500/30 bg-yellow-500/10 px-5 py-3.5 text-left hover:bg-yellow-500/15 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <svg className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <div>
+            <div className="text-[13px] font-semibold text-yellow-200">
+              {verifyStatus === "REJECTED" ? "Verification Rejected — Resubmit" : "Verify Account"}
+            </div>
+            <div className="text-[12px] text-yellow-200/60">
+              {verifyStatus === "REJECTED"
+                ? "Your documents were rejected. Click to resubmit your Ghana Card."
+                : "Complete identity verification to unlock sending, withdrawals and more."}
+            </div>
+          </div>
+        </div>
+        <svg className="w-4 h-4 text-yellow-400/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    )}
+
+    {verifyStatus === "PENDING" && (
+      <div className="w-full mb-4 flex items-center gap-3 rounded-[16px] border border-blue-500/30 bg-blue-500/10 px-5 py-3 text-left">
+        <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div className="text-[13px] text-blue-200">Verification under review — we&apos;ll update you within 1–2 business days.</div>
+      </div>
+    )}
 
       {/* TOP SECTION */}
       <section className="mt-2">

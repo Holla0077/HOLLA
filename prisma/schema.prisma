@@ -45,6 +45,13 @@ enum LedgerEntryType {
   CREDIT
 }
 
+enum VerificationStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -54,20 +61,43 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // ✅ add these:
   fullName    String?
-  gender      String? // later we can make enum
-  dateOfBirth DateTime? // store as DateTime
+  gender      String?
+  dateOfBirth DateTime?
 
-  // relations...
   wallets      Wallet[]
   transactions Transaction[] @relation("UserTransactions")
   topupRequests TopupRequest[]
 
-  isVerified Boolean @default(false)
-  verifiedAt DateTime?
+  isVerified         Boolean            @default(false)
+  verifiedAt         DateTime?
+  verificationStatus VerificationStatus @default(NONE)
 
   passwordResetTokens PasswordResetToken[]
+  kycDocument         KycDocument?
+}
+
+model KycDocument {
+  id         String             @id @default(cuid())
+  userId     String             @unique
+  frontPath  String
+  backPath   String
+  status     VerificationStatus @default(PENDING)
+  adminNote  String?
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  action       String
+  targetUserId String?
+  meta         Json?
+  createdAt    DateTime @default(now())
 }
 
 enum AssetType {

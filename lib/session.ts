@@ -7,5 +7,5 @@ export async function getSessionUser() {
   if (!token) return null;
   const payload = verifyToken(token);
   if (!payload) return null;
-  return { id: payload.id };
+  return { id: payload.id, impersonated: payload.impersonated ?? false };
 }

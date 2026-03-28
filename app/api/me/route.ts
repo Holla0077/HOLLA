@@ -32,6 +32,7 @@ export async function GET() {
       gender: true,
       dateOfBirth: true,
       isVerified: true,
+      verificationStatus: true,
       createdAt: true,
     },
   });
@@ -47,18 +48,15 @@ export async function GET() {
       gender: user.gender,
       dob: formatDob(user.dateOfBirth),
       verified: user.isVerified,
+      verificationStatus: user.verificationStatus,
     },
-    phones: [
-      {
-        id: user.id,
-        number: user.phone,
-        verified: user.isVerified,
-      },
-    ],
+    phones: [{ id: user.id, number: user.phone, verified: user.isVerified }],
     kyc: {
       idVerified: user.isVerified,
+      verificationStatus: user.verificationStatus,
       bvnVerified: false,
     },
+    impersonated: session.impersonated,
   });
 }
 
@@ -99,14 +97,9 @@ export async function PATCH(req: Request) {
         : {}),
     },
     select: {
-      id: true,
-      username: true,
-      email: true,
-      phone: true,
-      fullName: true,
-      gender: true,
-      dateOfBirth: true,
-      isVerified: true,
+      id: true, username: true, email: true, phone: true,
+      fullName: true, gender: true, dateOfBirth: true,
+      isVerified: true, verificationStatus: true,
     },
   });
 
@@ -119,8 +112,9 @@ export async function PATCH(req: Request) {
       gender: user.gender,
       dob: formatDob(user.dateOfBirth),
       verified: user.isVerified,
+      verificationStatus: user.verificationStatus,
     },
     phones: [{ id: user.id, number: user.phone, verified: user.isVerified }],
-    kyc: { idVerified: user.isVerified, bvnVerified: false },
+    kyc: { idVerified: user.isVerified, verificationStatus: user.verificationStatus, bvnVerified: false },
   });
 }
