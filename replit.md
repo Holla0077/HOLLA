@@ -1,7 +1,7 @@
 # Holla - Digital Wallet App
 
 ## Overview
-A Next.js 16 digital wallet application with support for fiat (GHS) and crypto assets, mobile money top-ups/withdrawals (MTN MoMo), internal Holla-to-Holla transfers, and a support chat system. Blue-black background with emerald accent theme.
+A Next.js 16 fintech app (KashBoy brand) for Ghana: digital wallets (GHS fiat + crypto), MoMo and Visa/card funding and withdrawal, internal Holla-to-Holla transfers, activity log, support chat, and user settings. Blue-black `#070B1A` background with emerald accent theme.
 
 ## Architecture
 - **Framework**: Next.js 16 (App Router) with TypeScript
@@ -16,10 +16,13 @@ A Next.js 16 digital wallet application with support for fiat (GHS) and crypto a
     - `me` — Profile GET + PATCH (fullName, username, gender, dob)
     - `me/password` — Change password (POST)
     - `me/phones` — Update primary phone (POST)
+    - `me/verify-request` — Verification request (POST)
     - `wallets` — List user wallets (GET)
-    - `transactions` — List transactions (GET) + Holla-to-Holla send (POST)
-    - `topup/momo` — MoMo top-up (POST) — requires `isVerified=true`
-    - `withdraw/momo` — MoMo withdraw (POST) — requires `isVerified=true`, deducts balance
+    - `transactions` — List transactions (GET) + Holla-to-Holla send (POST, atomic)
+    - `topup/momo` — MoMo deposit (POST) — credits wallet immediately, requires `isVerified=true`
+    - `topup/card` — Visa/card deposit (POST) — credits wallet immediately, requires `isVerified=true`
+    - `withdraw/momo` — MoMo withdrawal (POST) — atomic balance deduct, requires `isVerified=true`
+    - `withdraw/card` — Visa/card withdrawal (POST) — atomic balance deduct, requires `isVerified=true`
     - `support/conversations` + `support/messages` — Support chat
   - `app/app/` — Authenticated app pages (home, activity, send-receive/cash, settings, help)
   - `app/login/`, `app/signup/` — Auth pages

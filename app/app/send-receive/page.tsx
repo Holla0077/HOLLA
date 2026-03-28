@@ -516,30 +516,36 @@ export default function SendReceivePage() {
 
         </div>
 
-        {/* right: notes */}
+        {/* right: tips */}
         <div className="rounded-[22px] border border-slate-200/40 bg-transparent p-5">
-          <div className="text-[16px] font-semibold text-white">Notes</div>
+          <div className="text-[16px] font-semibold text-white">Quick Guide</div>
 
           <div className="mt-3 space-y-3 text-[13px] text-white/75">
             <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
-              <div className="font-semibold text-white/90">Receive rules</div>
+              <div className="font-semibold text-white/90">Sending Cash (GHS)</div>
               <div className="mt-1">
-                Receive only shows QR + link + your details. Top Up is handled on Summary via a modal.
+                Enter the recipient&apos;s Holla username, email, or phone number. Funds move instantly between Holla wallets.
               </div>
             </div>
 
             <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
-              <div className="font-semibold text-white/90">Send rules</div>
+              <div className="font-semibold text-white/90">Sending Crypto</div>
               <div className="mt-1">
-                Cash (GHS): internal transfers. Crypto: requires a destination address.
+                Paste the destination wallet address. Double-check the network — sending to the wrong network may result in permanent loss of funds.
               </div>
             </div>
 
             <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
-              <div className="font-semibold text-white/90">Next</div>
+              <div className="font-semibold text-white/90">Receiving</div>
               <div className="mt-1">
-                Add <span className="text-emerald-200">/api/me</span> so username/email/phone are real, and add{" "}
-                <span className="text-emerald-200">/api/deposit-address</span> for crypto addresses.
+                Share your Holla username or wallet address. To fund your GHS wallet via MoMo or Visa card, go to <span className="text-emerald-300">Summary → Fund Wallet</span>.
+              </div>
+            </div>
+
+            <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
+              <div className="font-semibold text-white/90">Fees</div>
+              <div className="mt-1">
+                Holla-to-Holla transfers are free. External MoMo and card transactions may have network fees.
               </div>
             </div>
           </div>

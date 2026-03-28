@@ -25,6 +25,7 @@ enum TransactionMethod {
   TELECEL_MOMO
   AT_MONEY
   BANK_TRANSFER
+  VISA_CARD
 
   // INTERNAL
   HOLLA_TO_HOLLA

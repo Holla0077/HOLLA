@@ -142,60 +142,60 @@ export default function HomePage() {
   const [buyOpen, setBuyOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
 
-  // Withdraw form
-  const [withdrawMethod, setWithdrawMethod] = useState<"CARD" | "MOMO" | "BANK" | "MERCHANT">("MOMO");
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [withdrawPhone, setWithdrawPhone] = useState("");
-  const [withdrawNetwork, setWithdrawNetwork] = useState("MTN");
-  const [withdrawError, setWithdrawError] = useState<string | null>(null);
-  const [withdrawBusy, setWithdrawBusy] = useState(false);
-  const [withdrawOk, setWithdrawOk] = useState<string | null>(null);
-
-  // Topup momo form
-  const [topupStep, setTopupStep] = useState<"METHOD" | "MOMO">("METHOD");
+  // Fund (topup) form
+  const [fundMethod, setFundMethod] = useState<"MOMO" | "CARD">("MOMO");
   const [topupPhone, setTopupPhone] = useState("");
   const [topupNetwork, setTopupNetwork] = useState("MTN");
   const [topupAmount, setTopupAmount] = useState("");
+  const [topupCardNumber, setTopupCardNumber] = useState("");
+  const [topupCardName, setTopupCardName] = useState("");
+  const [topupCardExpiry, setTopupCardExpiry] = useState("");
+  const [topupCardCvv, setTopupCardCvv] = useState("");
   const [topupError, setTopupError] = useState<string | null>(null);
   const [topupBusy, setTopupBusy] = useState(false);
   const [topupOk, setTopupOk] = useState<string | null>(null);
+
+  // Withdraw form
+  const [withdrawTab, setWithdrawTab] = useState<"MOMO" | "CARD">("MOMO");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawPhone, setWithdrawPhone] = useState("");
+  const [withdrawNetwork, setWithdrawNetwork] = useState("MTN");
+  const [withdrawCardNumber, setWithdrawCardNumber] = useState("");
+  const [withdrawCardName, setWithdrawCardName] = useState("");
+  const [withdrawCardExpiry, setWithdrawCardExpiry] = useState("");
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [withdrawBusy, setWithdrawBusy] = useState(false);
+  const [withdrawOk, setWithdrawOk] = useState<string | null>(null);
 
   // Buy/Sell
   const [tradeAmountCrypto, setTradeAmountCrypto] = useState("");
   const [tradeError, setTradeError] = useState<string | null>(null);
 
-  // 1) Load wallets
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        setWalletsLoading(true);
-        setWalletsError(null);
-
-        const res = await fetch("/api/wallets");
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) {
-          const text = await res.text();
-          throw new Error(`Server did not return JSON. Status=${res.status}. Body: ${text.slice(0, 120)}`);
-        }
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Failed to load wallets");
-
-        if (!alive) return;
-        setWallets(Array.isArray(data.wallets) ? data.wallets : []);
-      } catch (e: unknown) {
-        if (!alive) return;
-        setWalletsError(getErrorMessage(e));
-      } finally {
-        if (!alive) return;
-        setWalletsLoading(false);
+  // Load wallets (called on mount and after topup/withdraw)
+  async function loadWallets(showSpinner = false) {
+    try {
+      if (showSpinner) setWalletsLoading(true);
+      setWalletsError(null);
+      const res = await fetch("/api/wallets");
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Server did not return JSON. Status=${res.status}. Body: ${text.slice(0, 120)}`);
       }
-    })();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to load wallets");
+      setWallets(Array.isArray(data.wallets) ? data.wallets : []);
+    } catch (e: unknown) {
+      setWalletsError(getErrorMessage(e));
+    } finally {
+      if (showSpinner) setWalletsLoading(false);
+    }
+  }
 
-    return () => {
-      alive = false;
-    };
+  // 1) Load wallets on mount
+  useEffect(() => {
+    loadWallets(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 2) Load transactions
@@ -360,7 +360,7 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                        onClick={() => setTopupOpen(true)}
                        className="w-full rounded-[14px] border border-slate-200/60 px-5 py-2.5 text-center text-[14px] font-semibold text-black bg-emerald-500 hover:bg-emerald-600"
                       >
-                        TOPUP / DEPOSIT
+                        FUND WALLET
                       </button>
 
                       <button
@@ -441,61 +441,51 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
         </div>
       </section>
       
-      {/* TOP UP MODAL */}
+      {/* FUND (TOP UP) MODAL */}
       {topupOpen && (
         <div className="fixed inset-0 z-50">
           <button
             aria-label="Close"
-            onClick={() => { setTopupOpen(false); setTopupStep("METHOD"); setTopupOk(null); setTopupError(null); }}
+            onClick={() => { setTopupOpen(false); setTopupOk(null); setTopupError(null); }}
             className="absolute inset-0 bg-black/60"
           />
-          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl">
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs text-slate-400">Top Up</div>
-                <div className="mt-1 text-lg font-semibold text-white">
-                  {topupStep === "METHOD" ? "Choose funding method" : "Mobile Money (MoMo)"}
-                </div>
+                <div className="text-xs text-slate-400">Fund Wallet</div>
+                <div className="mt-1 text-lg font-semibold text-white">Deposit GH₵</div>
               </div>
               <button
                 type="button"
-                onClick={() => { setTopupOpen(false); setTopupStep("METHOD"); setTopupOk(null); setTopupError(null); }}
+                onClick={() => { setTopupOpen(false); setTopupOk(null); setTopupError(null); }}
                 className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-sm text-slate-200 hover:border-slate-700"
               >
                 Close
               </button>
             </div>
 
-            {topupStep === "METHOD" ? (
-              <div className="mt-5 grid gap-3">
-                {[
-                  { key: "MOMO", label: "Mobile Money (MoMo)" },
-                  { key: "CARD", label: "Card (coming soon)", disabled: true },
-                  { key: "BANK", label: "Bank Transfer (coming soon)", disabled: true },
-                  { key: "MERCHANT", label: "Merchant (coming soon)", disabled: true },
-                ].map((m) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    disabled={m.disabled}
-                    onClick={() => { if (!m.disabled) setTopupStep("MOMO"); }}
-                    className={[
-                      "w-full rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-colors",
-                      m.disabled
-                        ? "border-slate-800 bg-slate-950/20 text-slate-500 cursor-not-allowed"
-                        : "border-slate-700 bg-slate-900/30 text-slate-100 hover:border-emerald-500 hover:text-emerald-200",
-                    ].join(" ")}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-                <div className="mt-2 text-xs text-slate-400">
-                  Top Up adds funds to your wallet.
-                </div>
-              </div>
-            ) : (
-              <div className="mt-5 space-y-3">
-                <div className="grid gap-3">
+            {/* Method tabs */}
+            <div className="mt-5 flex gap-2">
+              {(["MOMO", "CARD"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setFundMethod(m); setTopupError(null); setTopupOk(null); }}
+                  className={[
+                    "flex-1 rounded-lg border py-2 text-sm font-semibold transition-colors",
+                    fundMethod === m
+                      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
+                      : "border-slate-700 bg-slate-950/20 text-slate-400 hover:border-slate-600 hover:text-slate-200",
+                  ].join(" ")}
+                >
+                  {m === "MOMO" ? "Mobile Money" : "Visa / Card"}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {fundMethod === "MOMO" ? (
+                <>
                   <div>
                     <div className="mb-1 text-xs font-semibold text-slate-300">Network</div>
                     <div className="flex gap-2">
@@ -522,7 +512,7 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                       className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
                       value={topupPhone}
                       onChange={(e) => setTopupPhone(e.target.value)}
-                      placeholder="+233..."
+                      placeholder="+233 24 000 0000"
                     />
                   </div>
                   <div>
@@ -532,61 +522,139 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                       value={topupAmount}
                       onChange={(e) => setTopupAmount(e.target.value)}
                       placeholder="e.g. 100"
+                      type="number"
+                      min="1"
                     />
                   </div>
-
-                  {topupError && (
-                    <div className="rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-sm text-red-200">
-                      {topupError}
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="mb-1 text-xs font-semibold text-slate-300">Card Number</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 tracking-wider"
+                      value={topupCardNumber}
+                      onChange={(e) => setTopupCardNumber(e.target.value)}
+                      placeholder="1234 5678 9012 3456"
+                      maxLength={19}
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-1 text-xs font-semibold text-slate-300">Cardholder Name</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      value={topupCardName}
+                      onChange={(e) => setTopupCardName(e.target.value)}
+                      placeholder="Name on card"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="mb-1 text-xs font-semibold text-slate-300">Expiry (MM/YY)</div>
+                      <input
+                        className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                        value={topupCardExpiry}
+                        onChange={(e) => setTopupCardExpiry(e.target.value)}
+                        placeholder="08/27"
+                        maxLength={5}
+                      />
                     </div>
-                  )}
-                  {topupOk && (
-                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
-                      {topupOk}
+                    <div>
+                      <div className="mb-1 text-xs font-semibold text-slate-300">CVV</div>
+                      <input
+                        className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                        value={topupCardCvv}
+                        onChange={(e) => setTopupCardCvv(e.target.value)}
+                        placeholder="123"
+                        maxLength={4}
+                        type="password"
+                      />
                     </div>
-                  )}
+                  </div>
+                  <div>
+                    <div className="mb-1 text-xs font-semibold text-slate-300">Amount (GH₵)</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      value={topupAmount}
+                      onChange={(e) => setTopupAmount(e.target.value)}
+                      placeholder="e.g. 100"
+                      type="number"
+                      min="1"
+                    />
+                  </div>
+                </>
+              )}
 
-                  <button
-                    disabled={topupBusy}
-                    className="mt-1 w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
-                    onClick={async () => {
-                      setTopupError(null);
-                      setTopupOk(null);
-                      if (!topupPhone.trim()) { setTopupError("Enter your phone number."); return; }
-                      if (!topupAmount || Number(topupAmount) <= 0) { setTopupError("Enter a valid amount."); return; }
-                      if (!selected) { setTopupError("No wallet selected."); return; }
-                      setTopupBusy(true);
-                      try {
-                        const res = await fetch("/api/topup/momo", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ walletId: selected.id, amount: topupAmount, phone: topupPhone.trim(), network: topupNetwork }),
-                        });
-                        const data = await res.json();
-                        if (!res.ok) { setTopupError(data?.error || "Top up failed."); return; }
-                        setTopupOk("Top up request submitted! Funds will reflect once confirmed.");
-                        setTopupAmount("");
-                        setTopupPhone("");
-                      } catch (e) {
-                        setTopupError(e instanceof Error ? e.message : "Something went wrong.");
-                      } finally {
-                        setTopupBusy(false);
-                      }
-                    }}
-                  >
-                    {topupBusy ? "Submitting…" : "Confirm Top Up"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => { setTopupStep("METHOD"); setTopupError(null); setTopupOk(null); }}
-                    className="w-full text-center text-xs text-slate-400 hover:text-slate-300"
-                  >
-                    ← Back to methods
-                  </button>
+              {topupError && (
+                <div className="rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-sm text-red-200">
+                  {topupError}
                 </div>
-              </div>
-            )}
+              )}
+              {topupOk && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                  {topupOk}
+                </div>
+              )}
+
+              <button
+                disabled={topupBusy}
+                className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
+                onClick={async () => {
+                  setTopupError(null);
+                  setTopupOk(null);
+                  if (!topupAmount || Number(topupAmount) <= 0) { setTopupError("Enter a valid amount."); return; }
+                  if (!selected) { setTopupError("No wallet selected."); return; }
+                  setTopupBusy(true);
+                  try {
+                    let res: Response;
+                    if (fundMethod === "MOMO") {
+                      if (!topupPhone.trim()) { setTopupError("Enter your phone number."); return; }
+                      res = await fetch("/api/topup/momo", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ walletId: selected.id, amount: topupAmount, phone: topupPhone.trim(), network: topupNetwork }),
+                      });
+                    } else {
+                      if (!topupCardNumber.trim()) { setTopupError("Enter your card number."); return; }
+                      if (!topupCardName.trim()) { setTopupError("Enter the cardholder name."); return; }
+                      if (!topupCardExpiry.trim()) { setTopupError("Enter the card expiry."); return; }
+                      if (!topupCardCvv.trim()) { setTopupError("Enter the CVV."); return; }
+                      res = await fetch("/api/topup/card", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          walletId: selected.id,
+                          amount: topupAmount,
+                          cardNumber: topupCardNumber.trim(),
+                          cardName: topupCardName.trim(),
+                          expiry: topupCardExpiry.trim(),
+                          cvv: topupCardCvv.trim(),
+                        }),
+                      });
+                    }
+                    const data = await res.json();
+                    if (!res.ok) { setTopupError(data?.error || "Top up failed."); return; }
+                    setTopupOk(fundMethod === "MOMO"
+                      ? `GH₵ ${topupAmount} credited to your wallet via ${topupNetwork} MoMo.`
+                      : `GH₵ ${topupAmount} credited to your wallet via card ending ${topupCardNumber.slice(-4)}.`
+                    );
+                    setTopupAmount("");
+                    setTopupPhone("");
+                    setTopupCardNumber("");
+                    setTopupCardName("");
+                    setTopupCardExpiry("");
+                    setTopupCardCvv("");
+                    await loadWallets();
+                  } catch (e) {
+                    setTopupError(e instanceof Error ? e.message : "Something went wrong.");
+                  } finally {
+                    setTopupBusy(false);
+                  }
+                }}
+              >
+                {topupBusy ? "Processing…" : `Fund Wallet — GH₵ ${topupAmount || "0"}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -594,129 +662,195 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
 {/* WITHDRAW MODAL (GH₵ only) */}
       {withdrawOpen && selected && isFiat(selected.code) && (
         <div className="fixed inset-0 z-50">
-          <button aria-label="Close" onClick={() => setWithdrawOpen(false)} className="absolute inset-0 bg-black/60" />
-          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl">
+          <button aria-label="Close" onClick={() => { setWithdrawOpen(false); setWithdrawOk(null); setWithdrawError(null); }} className="absolute inset-0 bg-black/60" />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-xs text-slate-400">Withdraw</div>
-                <div className="mt-1 text-lg font-semibold text-white">
-                  Ghana Cedi <span className="text-slate-500">·</span>{" "}
-                  <span className="text-emerald-300">GH₵</span>
-                </div>
+                <div className="mt-1 text-lg font-semibold text-white">Withdraw GH₵</div>
               </div>
               <button
                 type="button"
-                onClick={() => setWithdrawOpen(false)}
+                onClick={() => { setWithdrawOpen(false); setWithdrawOk(null); setWithdrawError(null); }}
                 className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-sm text-slate-200 hover:border-slate-700"
               >
                 Close
               </button>
             </div>
 
-            <div className="mt-5 space-y-3">
-              <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-4">
-                <div className="text-sm font-semibold text-white">Method</div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {(["MOMO", "CARD", "BANK", "MERCHANT"] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      disabled={m !== "MOMO"}
-                      onClick={() => setWithdrawMethod(m)}
-                      className={[
-                        "rounded-lg border px-3 py-2 text-sm font-semibold",
-                        m !== "MOMO" ? "border-slate-800 bg-slate-950/20 text-slate-500 cursor-not-allowed" :
-                        withdrawMethod === m
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                          : "border-slate-800 bg-slate-950/20 text-slate-200 hover:border-slate-700",
-                      ].join(" ")}
-                    >
-                      {m === "MOMO" ? "Mobile Money" : `${m} (soon)`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-4 space-y-3">
-                <div>
-                  <div className="text-xs font-semibold text-slate-300 mb-1">Network</div>
-                  <div className="flex gap-2">
-                    {["MTN", "TELECEL", "AIRTELTIGO"].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setWithdrawNetwork(n)}
-                        className={[
-                          "flex-1 rounded-lg border px-2 py-2 text-xs font-semibold",
-                          withdrawNetwork === n
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                            : "border-slate-700 bg-slate-950/20 text-slate-300 hover:border-slate-600",
-                        ].join(" ")}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-300 mb-1">Phone Number</div>
-                  <input
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm outline-none focus:border-emerald-400 text-white"
-                    value={withdrawPhone}
-                    onChange={(e) => setWithdrawPhone(e.target.value)}
-                    placeholder="+233..."
-                  />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-300 mb-1">Amount (GH₵)</div>
-                  <input
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm outline-none focus:border-emerald-400 text-white"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="e.g. 100"
-                  />
-                </div>
-                {withdrawError && (
-                  <div className="rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-sm text-red-200">
-                    {withdrawError}
-                  </div>
-                )}
-                {withdrawOk && (
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
-                    {withdrawOk}
-                  </div>
-                )}
+            {/* Method tabs */}
+            <div className="mt-5 flex gap-2">
+              {(["MOMO", "CARD"] as const).map((m) => (
                 <button
-                  disabled={withdrawBusy}
-                  className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
-                  onClick={async () => {
-                    setWithdrawError(null);
-                    setWithdrawOk(null);
-                    if (!withdrawPhone.trim()) { setWithdrawError("Enter your phone number."); return; }
-                    if (!withdrawAmount || Number(withdrawAmount) <= 0) { setWithdrawError("Enter a valid amount."); return; }
-                    if (!selected) { setWithdrawError("No wallet selected."); return; }
-                    setWithdrawBusy(true);
-                    try {
-                      const res = await fetch("/api/withdraw/momo", {
+                  key={m}
+                  type="button"
+                  onClick={() => { setWithdrawTab(m); setWithdrawError(null); setWithdrawOk(null); }}
+                  className={[
+                    "flex-1 rounded-lg border py-2 text-sm font-semibold transition-colors",
+                    withdrawTab === m
+                      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
+                      : "border-slate-700 bg-slate-950/20 text-slate-400 hover:border-slate-600 hover:text-slate-200",
+                  ].join(" ")}
+                >
+                  {m === "MOMO" ? "Mobile Money" : "Visa / Card"}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {withdrawTab === "MOMO" ? (
+                <>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-300 mb-1">Network</div>
+                    <div className="flex gap-2">
+                      {["MTN", "TELECEL", "AIRTELTIGO"].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setWithdrawNetwork(n)}
+                          className={[
+                            "flex-1 rounded-lg border px-2 py-2 text-xs font-semibold",
+                            withdrawNetwork === n
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                              : "border-slate-700 bg-slate-950/20 text-slate-300 hover:border-slate-600",
+                          ].join(" ")}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-300 mb-1">Phone Number</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      value={withdrawPhone}
+                      onChange={(e) => setWithdrawPhone(e.target.value)}
+                      placeholder="+233 24 000 0000"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-300 mb-1">Amount (GH₵)</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      placeholder="e.g. 100"
+                      type="number"
+                      min="1"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="mb-1 text-xs font-semibold text-slate-300">Card Number</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 tracking-wider"
+                      value={withdrawCardNumber}
+                      onChange={(e) => setWithdrawCardNumber(e.target.value)}
+                      placeholder="1234 5678 9012 3456"
+                      maxLength={19}
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-1 text-xs font-semibold text-slate-300">Cardholder Name</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      value={withdrawCardName}
+                      onChange={(e) => setWithdrawCardName(e.target.value)}
+                      placeholder="Name on card"
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-1 text-xs font-semibold text-slate-300">Expiry (MM/YY)</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      value={withdrawCardExpiry}
+                      onChange={(e) => setWithdrawCardExpiry(e.target.value)}
+                      placeholder="08/27"
+                      maxLength={5}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-300 mb-1">Amount (GH₵)</div>
+                    <input
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      placeholder="e.g. 100"
+                      type="number"
+                      min="1"
+                    />
+                  </div>
+                </>
+              )}
+
+              {withdrawError && (
+                <div className="rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-sm text-red-200">
+                  {withdrawError}
+                </div>
+              )}
+              {withdrawOk && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                  {withdrawOk}
+                </div>
+              )}
+              <button
+                disabled={withdrawBusy}
+                className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
+                onClick={async () => {
+                  setWithdrawError(null);
+                  setWithdrawOk(null);
+                  if (!withdrawAmount || Number(withdrawAmount) <= 0) { setWithdrawError("Enter a valid amount."); return; }
+                  if (!selected) { setWithdrawError("No wallet selected."); return; }
+                  setWithdrawBusy(true);
+                  try {
+                    let res: Response;
+                    if (withdrawTab === "MOMO") {
+                      if (!withdrawPhone.trim()) { setWithdrawError("Enter your phone number."); return; }
+                      res = await fetch("/api/withdraw/momo", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ walletId: selected.id, amount: withdrawAmount, phone: withdrawPhone.trim(), network: withdrawNetwork }),
                       });
-                      const data = await res.json();
-                      if (!res.ok) { setWithdrawError(data?.error || "Withdraw failed."); return; }
-                      setWithdrawOk("Withdraw submitted! Funds will be sent shortly.");
-                      setWithdrawAmount("");
-                      setWithdrawPhone("");
-                    } catch (e) {
-                      setWithdrawError(e instanceof Error ? e.message : "Something went wrong.");
-                    } finally {
-                      setWithdrawBusy(false);
+                    } else {
+                      if (!withdrawCardNumber.trim()) { setWithdrawError("Enter your card number."); return; }
+                      if (!withdrawCardName.trim()) { setWithdrawError("Enter the cardholder name."); return; }
+                      if (!withdrawCardExpiry.trim()) { setWithdrawError("Enter the card expiry."); return; }
+                      res = await fetch("/api/withdraw/card", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          walletId: selected.id,
+                          amount: withdrawAmount,
+                          cardNumber: withdrawCardNumber.trim(),
+                          cardName: withdrawCardName.trim(),
+                          expiry: withdrawCardExpiry.trim(),
+                        }),
+                      });
                     }
-                  }}
-                >
-                  {withdrawBusy ? "Submitting…" : "Confirm Withdraw"}
-                </button>
-              </div>
+                    const data = await res.json();
+                    if (!res.ok) { setWithdrawError(data?.error || "Withdraw failed."); return; }
+                    setWithdrawOk(withdrawTab === "MOMO"
+                      ? `GH₵ ${withdrawAmount} withdrawal submitted via ${withdrawNetwork} MoMo. Funds will arrive shortly.`
+                      : `GH₵ ${withdrawAmount} withdrawal submitted to card ending ${withdrawCardNumber.slice(-4)}. Funds will arrive in 1–3 business days.`
+                    );
+                    setWithdrawAmount("");
+                    setWithdrawPhone("");
+                    setWithdrawCardNumber("");
+                    setWithdrawCardName("");
+                    setWithdrawCardExpiry("");
+                    await loadWallets();
+                  } catch (e) {
+                    setWithdrawError(e instanceof Error ? e.message : "Something went wrong.");
+                  } finally {
+                    setWithdrawBusy(false);
+                  }
+                }}
+              >
+                {withdrawBusy ? "Processing…" : `Withdraw GH₵ ${withdrawAmount || "0"}`}
+              </button>
             </div>
           </div>
         </div>
@@ -777,15 +911,8 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                   </div>
                 )}
 
-                <button
-                  className="mt-3 w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-600"
-                  onClick={() => alert("Next: /api/buy and /api/sell with ledger + fee rules.")}
-                >
-                  Confirm {buyOpen ? "Buy" : "Sell"}
-                </button>
-
-                <div className="mt-2 text-xs text-slate-500">
-                  Uses Ghana Cedis wallet for BUY; credits Ghana Cedis wallet for SELL.
+                <div className="mt-3 rounded-lg border border-yellow-600/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
+                  Crypto trading (Buy / Sell) is coming soon. Your GHS wallet will be debited for buys and credited for sells at live GHS rates.
                 </div>
               </div>
             </div>
