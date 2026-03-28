@@ -11,14 +11,19 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@bitcoinerlab/secp256k1": "^1.2.0",
     "@prisma/client": "^5.19.1",
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^3.0.3",
+    "bip32": "^5.0.1",
+    "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^7.0.1",
     "jsonwebtoken": "^9.0.3",
     "next": "16.1.1",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "resend": "^6.9.4",
     "uuid": "^13.0.0",
     "zod": "^4.3.5"
   },

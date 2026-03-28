@@ -76,6 +76,41 @@ model User {
 
   passwordResetTokens PasswordResetToken[]
   kycDocument         KycDocument?
+  cryptoAddresses     CryptoAddress[]
+}
+
+model CryptoAddress {
+  id        String   @id @default(cuid())
+  userId    String
+  coin      String   // "BTC" | "ETH" etc.
+  address   String   @unique
+  hdIndex   Int
+  createdAt DateTime @default(now())
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deposits CryptoDeposit[]
+
+  @@unique([userId, coin])
+  @@index([coin])
+}
+
+model CryptoDeposit {
+  id            String   @id @default(cuid())
+  addressId     String
+  txid          String
+  vout          Int
+  amountSat     BigInt   @db.BigInt
+  confirmations Int      @default(0)
+  status        String   @default("PENDING") // PENDING | CONFIRMED | CREDITED
+  walletId      String?
+  txRecordId    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  address CryptoAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  @@unique([txid, vout])
+  @@index([addressId])
 }
 
 model KycDocument {

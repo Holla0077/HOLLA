@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import prisma from "@/lib/prisma";
 import { getCollectionStatus } from "@/lib/mtn-momo";
+import { sendTransactionEmail } from "@/lib/email";
 
 function bad(msg: string, code = 400) {
   return NextResponse.json({ error: msg }, { status: code });
@@ -68,9 +69,22 @@ export async function GET(req: Request) {
         }
       });
 
+      // Fire receipt email (non-blocking)
+      const ghsAmount = `GH₵ ${(Number(topupReq.amount) / 100).toFixed(2)}`;
+      prisma.user.findUnique({ where: { id: session.id }, select: { email: true, username: true } })
+        .then((u) => u && sendTransactionEmail({
+          to: u.email,
+          username: u.username,
+          type: "topup",
+          amount: ghsAmount,
+          reference: ref,
+          method: `${topupReq.network} MoMo`,
+        }))
+        .catch(console.error);
+
       return NextResponse.json({
         status: "COMPLETED",
-        message: `GH₵ ${(Number(topupReq.amount) / 100).toFixed(2)} has been added to your wallet.`,
+        message: `${ghsAmount} has been added to your wallet.`,
       });
     }
 

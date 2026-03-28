@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import prisma from "@/lib/prisma";
 import { getDisbursementStatus } from "@/lib/mtn-momo";
+import { sendTransactionEmail } from "@/lib/email";
 
 function bad(msg: string, code = 400) {
   return NextResponse.json({ error: msg }, { status: code });
@@ -44,6 +45,19 @@ export async function GET(req: Request) {
       if (withReq.transactionId) {
         await prisma.transaction.update({ where: { id: withReq.transactionId }, data: { status: "COMPLETED" } });
       }
+      const ghsAmount = `GH₵ ${(Number(withReq.amount) / 100).toFixed(2)}`;
+      prisma.user.findUnique({ where: { id: session.id }, select: { email: true, username: true } })
+        .then((u) => u && sendTransactionEmail({
+          to: u.email,
+          username: u.username,
+          type: "withdraw",
+          amount: ghsAmount,
+          reference: ref,
+          method: `${withReq.network} MoMo`,
+          note: `Sent to ${withReq.phone}`,
+        }))
+        .catch(console.error);
+
       return NextResponse.json({ status: "COMPLETED", message: "Withdrawal sent to your MoMo wallet." });
     }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { auditLog } from "@/lib/audit";
 import prisma from "@/lib/prisma";
+import { sendVerificationStatusEmail } from "@/lib/email";
 
 export async function GET() {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,6 +53,14 @@ export async function PATCH(req: Request) {
   ]);
 
   await auditLog(`kyc_${action}`, doc.userId, { kycId, adminNote: adminNote ?? null });
+
+  // Send email notification to the user
+  sendVerificationStatusEmail({
+    to: doc.user.email,
+    username: doc.user.username,
+    status: newStatus as "APPROVED" | "REJECTED",
+    adminNote: adminNote ?? undefined,
+  }).catch((err) => console.error("[email kyc notification]", err));
 
   return NextResponse.json({ ok: true, status: newStatus });
 }

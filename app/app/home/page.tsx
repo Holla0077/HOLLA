@@ -177,6 +177,15 @@ export default function HomePage() {
   const [tradeAmountCrypto, setTradeAmountCrypto] = useState("");
   const [tradeError, setTradeError] = useState<string | null>(null);
 
+  // BTC deposit modal
+  const [btcDepositOpen, setBtcDepositOpen] = useState(false);
+  const [btcAddress, setBtcAddress] = useState<string | null>(null);
+  const [btcAddressLoading, setBtcAddressLoading] = useState(false);
+  const [btcAddressError, setBtcAddressError] = useState<string | null>(null);
+  const [btcSyncing, setBtcSyncing] = useState(false);
+  const [btcSyncResult, setBtcSyncResult] = useState<string | null>(null);
+  const [btcCopied, setBtcCopied] = useState(false);
+
   // Load wallets (called on mount and after topup/withdraw)
   async function loadWallets(showSpinner = false) {
     try {
@@ -431,6 +440,33 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                     </>
                   ) : (
                     <>
+                      {/* For BTC wallets show DEPOSIT button */}
+                      {selected.code === "BTC" && (
+                        <button
+                          onClick={async () => {
+                            setBtcDepositOpen(true);
+                            setBtcAddressError(null);
+                            setBtcSyncResult(null);
+                            if (!btcAddress) {
+                              setBtcAddressLoading(true);
+                              try {
+                                const r = await fetch("/api/crypto/btc/address");
+                                const d = await r.json();
+                                if (!r.ok) throw new Error(d.error || "Failed to get address");
+                                setBtcAddress(d.address);
+                              } catch (e) {
+                                setBtcAddressError(e instanceof Error ? e.message : "Error");
+                              } finally {
+                                setBtcAddressLoading(false);
+                              }
+                            }
+                          }}
+                          className="w-full rounded-[14px] border border-slate-200/60 bg-emerald-500 px-5 py-2.5 text-center text-[15px] font-semibold text-black hover:bg-emerald-600"
+                        >
+                          DEPOSIT BTC
+                        </button>
+                      )}
+
                       <button
                         onClick={() => {
                           setTradeError(null);
@@ -1065,6 +1101,112 @@ return wallets.filter((w) => w.type === "CRYPTO" && w.code !== "GHS");
                   Crypto trading (Buy / Sell) is coming soon. Your GHS wallet will be debited for buys and credited for sells at live GHS rates.
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── BTC DEPOSIT MODAL ── */}
+      {btcDepositOpen && (
+        <div className="fixed inset-0 z-50">
+          <button aria-label="Close" onClick={() => setBtcDepositOpen(false)} className="absolute inset-0 bg-black/60" />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs text-slate-400">Receive</div>
+                <div className="mt-1 text-lg font-semibold text-white">Bitcoin Deposit Address</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBtcDepositOpen(false)}
+                className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-sm text-slate-200 hover:border-slate-700"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {btcAddressLoading && (
+                <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-300">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+                  Generating your Bitcoin address…
+                </div>
+              )}
+
+              {btcAddressError && (
+                <div className="rounded-xl border border-red-700/40 bg-red-500/10 p-4 text-sm text-red-300">
+                  {btcAddressError}
+                </div>
+              )}
+
+              {btcAddress && !btcAddressLoading && (
+                <>
+                  <div className="rounded-xl border border-slate-700 bg-slate-950/30 p-4">
+                    <div className="text-xs text-slate-400 mb-2">Your BTC Deposit Address</div>
+                    <div className="font-mono text-sm text-emerald-300 break-all leading-relaxed">
+                      {btcAddress}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(btcAddress);
+                        setBtcCopied(true);
+                        setTimeout(() => setBtcCopied(false), 2000);
+                      }}
+                      className="mt-3 w-full rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+                    >
+                      {btcCopied ? "✓ Copied!" : "Copy Address"}
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-4 text-xs text-slate-400 space-y-1.5">
+                    <div className="font-semibold text-slate-300">How it works</div>
+                    <div>1. Copy this address and paste it in the app or exchange you&apos;re sending from.</div>
+                    <div>2. Send any amount of BTC to this address.</div>
+                    <div>3. Click <strong className="text-slate-200">Check for Deposits</strong> below to detect incoming transactions.</div>
+                    <div>4. Your KashBoy BTC wallet will be credited after <strong className="text-slate-200">1 confirmation</strong> (~10 min).</div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={btcSyncing}
+                    onClick={async () => {
+                      setBtcSyncing(true);
+                      setBtcSyncResult(null);
+                      try {
+                        const r = await fetch("/api/crypto/btc/sync-deposits", { method: "POST" });
+                        const d = await r.json();
+                        if (!r.ok) throw new Error(d.error || "Sync failed");
+                        const credited = d.deposits?.filter((dep: { status: string }) => dep.status === "CREDITED").length ?? 0;
+                        const pending = d.deposits?.filter((dep: { status: string }) => dep.status === "PENDING").length ?? 0;
+                        if (credited > 0) {
+                          setBtcSyncResult(`✓ ${credited} deposit(s) credited to your wallet!`);
+                          await loadWallets();
+                        } else if (pending > 0) {
+                          setBtcSyncResult(`${pending} deposit(s) detected — waiting for confirmations.`);
+                        } else {
+                          setBtcSyncResult("No deposits found yet. Transactions may take a few minutes to appear.");
+                        }
+                      } catch (e) {
+                        setBtcSyncResult(e instanceof Error ? e.message : "Sync error");
+                      } finally {
+                        setBtcSyncing(false);
+                      }
+                    }}
+                    className="w-full rounded-[14px] bg-emerald-500 px-5 py-2.5 text-[15px] font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
+                  >
+                    {btcSyncing ? "Checking blockchain…" : "Check for Deposits"}
+                  </button>
+
+                  {btcSyncResult && (
+                    <div className={`rounded-xl border p-3 text-sm ${btcSyncResult.startsWith("✓")
+                      ? "border-emerald-700/40 bg-emerald-500/10 text-emerald-300"
+                      : "border-slate-700 bg-slate-950/30 text-slate-300"
+                    }`}>
+                      {btcSyncResult}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
