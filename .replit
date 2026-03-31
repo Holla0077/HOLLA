@@ -45,3 +45,8 @@ MTN_MOMO_ENV = "sandbox"
 MTN_MOMO_BASE_URL = "https://sandbox.momodeveloper.mtn.com"
 BTC_NETWORK = "testnet"
 EMAIL_FROM = "KashBoy <noreply@kashboy.com>"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["npm", "start"]
+build = ["npm", "run", "build"]

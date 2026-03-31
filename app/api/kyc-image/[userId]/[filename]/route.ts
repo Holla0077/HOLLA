@@ -36,7 +36,7 @@ export async function GET(
   const mimeMap: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
   const contentType = mimeMap[ext] ?? "application/octet-stream";
 
-  return new Response(buf, {
+  return new Response(new Uint8Array(buf), {
     headers: {
       "Content-Type": contentType,
       "Cache-Control": "no-store",
