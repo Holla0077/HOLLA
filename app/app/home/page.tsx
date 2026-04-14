@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { WalletCard, formatWalletBalance } from "@/app/app/_components/WalletCard";
+import { WalletCard, formatWalletBalance } from "@/app/app/components/WalletCard";
 
 type UiWallet = {
   id: string;

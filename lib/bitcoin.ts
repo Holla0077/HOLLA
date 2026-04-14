@@ -28,9 +28,17 @@ function network(): bitcoin.Network {
 }
 
 function blockstreamBase(): string {
-  return process.env.BTC_NETWORK === "testnet"
+  const primary = process.env.BTC_NETWORK === "testnet"
     ? "https://blockstream.info/testnet/api"
     : "https://blockstream.info/api";
+  
+  // Fallback to mempool.space if Blockstream rate limits
+  const fallback = process.env.BTC_NETWORK === "testnet"
+    ? "https://mempool.space/testnet/api"
+    : "https://mempool.space/api";
+  
+  // You can add a simple toggle by env var if needed
+  return process.env.USE_FALLBACK_BTC_API === "true" ? fallback : primary;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -98,10 +106,24 @@ export interface TxStatus {
 
 /** Fetch all UTXOs (unspent outputs) for a Bitcoin address. */
 export async function fetchAddressUtxos(address: string): Promise<UtxoEntry[]> {
-  const url = `${blockstreamBase()}/address/${address}/utxo`;
-  const res = await fetch(url, { next: { revalidate: 0 } } as RequestInit);
-  if (!res.ok) throw new Error(`Blockstream UTXO fetch failed: ${res.status}`);
-  return res.json();
+  const base = blockstreamBase();
+  let lastError: Error | null = null;
+  
+  for (const apiBase of [base, base.includes("blockstream") ? base.replace("blockstream.info", "mempool.space") : base]) {
+    try {
+      const url = `${apiBase}/address/${address}/utxo`;
+      const res = await fetch(url, { next: { revalidate: 0 } } as RequestInit);
+      if (res.status === 429) {
+        // Rate limited, try fallback
+        continue;
+      }
+      if (!res.ok) throw new Error(`UTXO fetch failed: ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      lastError = e as Error;
+    }
+  }
+  throw lastError || new Error("All UTXO fetch attempts failed");
 }
 
 /** Get current confirmation count for a txid (0 if unconfirmed). */

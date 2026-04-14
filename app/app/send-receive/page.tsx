@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { WalletCard, formatWalletBalance, walletCardGlass } from "@/app/app/_components/WalletCard";
+import { WalletCard, formatWalletBalance, walletCardGlass } from "@/app/app/components/WalletCard";
+import SendBtcForm from "@/app/app/components/wallet/SendBtcForm";
 
 type UiWallet = {
   id: string;
@@ -43,7 +44,7 @@ export default function SendReceivePage() {
 
   const [tab, setTab] = useState<Tab>("SEND");
 
-  // SEND form
+  // SEND form (used for non-BTC sends)
   const [sendTo, setSendTo] = useState("");
   const [sendAddress, setSendAddress] = useState("");
   const [sendAmount, setSendAmount] = useState("");
@@ -109,6 +110,7 @@ export default function SendReceivePage() {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /**/ }
   }
 
+  // Submit for non-BTC sends (GHS and other cryptos)
   async function submitSend() {
     if (!selected) return;
     resetSendMessages();
@@ -135,10 +137,8 @@ export default function SendReceivePage() {
         setSendAmount(""); setSendTo("");
         await loadWallets();
       } else {
-        // On-chain BTC send — requires signing infrastructure; show clear message
-        setSendError(
-          "On-chain BTC sends are not yet live. To send BTC, withdraw from your wallet using the blockchain sweep feature coming soon."
-        );
+        // Non-BTC crypto (not yet implemented)
+        setSendError(`${selected.code} sends are not yet available.`);
       }
     } catch (e) { setSendError(getErrorMessage(e)); }
     finally { setSendBusy(false); }
@@ -251,63 +251,70 @@ export default function SendReceivePage() {
                 {selected.name} <span className="text-emerald-400">· {selected.code}</span>
               </div>
 
-              <div className="mt-5 space-y-3">
-                {isFiat(selected.code) ? (
+              {/* Conditionally render SendBtcForm for BTC, else original form */}
+              {isBtc(selected.code) ? (
+                <div className="mt-5">
+                  <SendBtcForm />
+                </div>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  {isFiat(selected.code) ? (
+                    <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
+                      <div className="text-[13px] font-semibold text-white/90">Send to</div>
+                      <div className="mt-1 text-[12px] text-white/60">Username, email, or phone — internal transfer</div>
+                      <input
+                        value={sendTo}
+                        onChange={e => setSendTo(e.target.value)}
+                        placeholder="username / email / +233..."
+                        className="mt-3 w-full rounded-[12px] border border-slate-200/20 bg-slate-900/10 px-3 py-2 text-[14px] text-white outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
+                      <div className="text-[13px] font-semibold text-white/90">Destination address</div>
+                      <div className="mt-1 text-[12px] text-white/60">Paste the recipient&apos;s {selected.code} wallet address</div>
+                      <input
+                        value={sendAddress}
+                        onChange={e => setSendAddress(e.target.value)}
+                        placeholder={`${selected.code} address`}
+                        className="mt-3 w-full rounded-[12px] border border-slate-200/20 bg-slate-900/10 px-3 py-2 font-mono text-[13px] text-white outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  )}
+
                   <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
-                    <div className="text-[13px] font-semibold text-white/90">Send to</div>
-                    <div className="mt-1 text-[12px] text-white/60">Username, email, or phone — internal transfer</div>
+                    <div className="text-[13px] font-semibold text-white/90">Amount</div>
+                    <div className="mt-1 text-[12px] text-white/60">
+                      Balance: {formatWalletBalance(selected.code, selected.balance)} {selected.code}
+                    </div>
                     <input
-                      value={sendTo}
-                      onChange={e => setSendTo(e.target.value)}
-                      placeholder="username / email / +233..."
+                      value={sendAmount}
+                      onChange={e => setSendAmount(e.target.value)}
+                      type="number"
+                      min="0"
+                      step={isFiat(selected.code) ? "1" : "0.00000001"}
+                      placeholder={isFiat(selected.code) ? "e.g. 50" : "e.g. 0.001"}
                       className="mt-3 w-full rounded-[12px] border border-slate-200/20 bg-slate-900/10 px-3 py-2 text-[14px] text-white outline-none focus:border-emerald-400"
                     />
                   </div>
-                ) : (
-                  <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
-                    <div className="text-[13px] font-semibold text-white/90">Destination address</div>
-                    <div className="mt-1 text-[12px] text-white/60">Paste the recipient&apos;s {selected.code} wallet address</div>
-                    <input
-                      value={sendAddress}
-                      onChange={e => setSendAddress(e.target.value)}
-                      placeholder={`${selected.code} address`}
-                      className="mt-3 w-full rounded-[12px] border border-slate-200/20 bg-slate-900/10 px-3 py-2 font-mono text-[13px] text-white outline-none focus:border-emerald-400"
-                    />
-                  </div>
-                )}
 
-                <div className="rounded-[16px] border border-slate-200/20 bg-slate-900/10 px-4 py-4">
-                  <div className="text-[13px] font-semibold text-white/90">Amount</div>
-                  <div className="mt-1 text-[12px] text-white/60">
-                    Balance: {formatWalletBalance(selected.code, selected.balance)} {selected.code}
-                  </div>
-                  <input
-                    value={sendAmount}
-                    onChange={e => setSendAmount(e.target.value)}
-                    type="number"
-                    min="0"
-                    step={isFiat(selected.code) ? "1" : "0.00000001"}
-                    placeholder={isFiat(selected.code) ? "e.g. 50" : "e.g. 0.001"}
-                    className="mt-3 w-full rounded-[12px] border border-slate-200/20 bg-slate-900/10 px-3 py-2 text-[14px] text-white outline-none focus:border-emerald-400"
-                  />
+                  {sendError && (
+                    <div className="rounded-[14px] border border-red-700/40 bg-red-500/10 p-3 text-[13px] text-red-200">{sendError}</div>
+                  )}
+                  {sendOk && (
+                    <div className="rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 p-3 text-[13px] text-emerald-200">{sendOk}</div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={sendBusy || !selected}
+                    onClick={submitSend}
+                    className="w-full rounded-[16px] bg-emerald-500 px-6 py-3 text-[16px] font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
+                  >
+                    {sendBusy ? "Sending…" : `SEND ${selected.code}`}
+                  </button>
                 </div>
-
-                {sendError && (
-                  <div className="rounded-[14px] border border-red-700/40 bg-red-500/10 p-3 text-[13px] text-red-200">{sendError}</div>
-                )}
-                {sendOk && (
-                  <div className="rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 p-3 text-[13px] text-emerald-200">{sendOk}</div>
-                )}
-
-                <button
-                  type="button"
-                  disabled={sendBusy || !selected}
-                  onClick={submitSend}
-                  className="w-full rounded-[16px] bg-emerald-500 px-6 py-3 text-[16px] font-semibold text-black hover:bg-emerald-600 disabled:opacity-60"
-                >
-                  {sendBusy ? "Sending…" : `SEND ${selected.code}`}
-                </button>
-              </div>
+              )}
             </>
           ) : (
             /* ─── RECEIVE ──────────────────────────────────── */
