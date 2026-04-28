@@ -62,13 +62,14 @@ export default function SignupPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#070B1A] text-white px-4">
       <div className="w-full max-w-md">
-        {/* Logo only (top) */}
-        <div className="flex justify-center mb-6">
-          {/* Use "icon" for clean PayPal vibe. Switch to "full" if you want the text too */}
-          <HollaLogo variant="icon" className="scale-300" />
+        {/* Logo – identical to login page scaling */}
+        <div className="flex justify-center mb-8">
+          <div className="scale-[4]">
+            <HollaLogo variant="icon" />
+          </div>
         </div>
 
-        {/* White card like PayPal */}
+        {/* White card */}
         <div className="bg-white text-slate-900 rounded-xl shadow-2xl border border-slate-200 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -103,7 +104,7 @@ export default function SignupPage() {
                 required
               />
               <p className="mt-1 text-xs text-slate-500">
-                Format example: +233XXXXXXXXX
+                Format: +233XXXXXXXXX
               </p>
             </div>
 
@@ -118,6 +119,7 @@ export default function SignupPage() {
               />
             </div>
 
+            {/* Terms checkbox */}
             <label className="flex items-start gap-2 text-xs text-slate-700">
               <input
                 type="checkbox"
@@ -127,9 +129,22 @@ export default function SignupPage() {
               />
               <span>
                 I agree to the{" "}
-                <Link href="/terms" target="_blank" className="text-emerald-600 underline hover:text-emerald-700">Terms of Service</Link>
-                {" "}and{" "}
-                <Link href="/privacy" target="_blank" className="text-emerald-600 underline hover:text-emerald-700">Privacy Policy</Link>.
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  className="text-emerald-600 underline hover:text-emerald-700"
+                >
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  className="text-emerald-600 underline hover:text-emerald-700"
+                >
+                  Privacy Policy
+                </Link>
+                .
               </span>
             </label>
 
@@ -150,7 +165,7 @@ export default function SignupPage() {
               disabled={loading}
               className="w-full rounded-lg py-3 font-semibold bg-emerald-500 hover:bg-emerald-600 text-black disabled:opacity-60"
             >
-              {loading ? "Creating..." : "Create Wallet"}
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 
@@ -169,15 +184,14 @@ export default function SignupPage() {
             Log In
           </Link>
 
-          {/* Optional helper text */}
+          {/* Already have account link – extra, but can stay */}
           <div className="text-center mt-4">
-            <button
-              type="button"
+            <Link
+              href="/login"
               className="text-sm text-emerald-600 hover:underline"
-              onClick={() => router.push("/login")}
             >
               Already have an account?
-            </button>
+            </Link>
           </div>
         </div>
       </div>
