@@ -1,0 +1,1 @@
+export { LedgerService } from '@/src/domains/ledger/services/ledger.service';

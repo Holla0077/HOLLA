@@ -1,8 +1,8 @@
-import { ensureCoreAssetsAndUserWallets } from "@/lib/bootstrap";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import prisma from "@/lib/prisma";
+import prisma from "@/src/shared/database/prisma";
+import { WalletService } from "@/src/domains/wallet/services/wallet.service";
 
 const signupSchema = z.object({
   username: z.string().min(3),
@@ -15,7 +15,6 @@ const signupSchema = z.object({
 export async function POST(req: Request) {
   try {
     const json = await req.json();
-
     const parsed = signupSchema.safeParse(json);
     if (!parsed.success) {
       return NextResponse.json(
@@ -25,21 +24,14 @@ export async function POST(req: Request) {
     }
 
     const { username, email, phone, password, acceptTerms } = parsed.data;
-
     if (!acceptTerms) {
-      return NextResponse.json(
-        { error: "You must accept the terms" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "You must accept the terms" }, { status: 400 });
     }
 
-    // Check if any of email/username/phone is already used
+    // Check duplicates
     const existing = await prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { username }, { phone }],
-      },
+      where: { OR: [{ email }, { username }, { phone }] },
     });
-
     if (existing) {
       return NextResponse.json(
         { error: "User with same email/username/phone already exists" },
@@ -50,29 +42,11 @@ export async function POST(req: Request) {
     const hashed = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
-  data: {
-    username,
-    email,
-    phone,
-    passwordHash: hashed,
-  },
-});
+      data: { username, email, phone, passwordHash: hashed },
+    });
 
-// ✅ Create default wallets for all assets
-const assets = await prisma.asset.findMany();
-
-if (assets.length > 0) {
-  await prisma.wallet.createMany({
-    data: assets.map((a) => ({
-      userId: user.id,
-      assetId: a.id,
-      balance: BigInt(0),
-    })),
-    skipDuplicates: true,
-  });
-}
-
-await ensureCoreAssetsAndUserWallets(user.id);
+    // Create default wallets for all assets via WalletService
+    await WalletService.initializeUserWallets(user.id);
 
     return NextResponse.json(
       {
@@ -83,9 +57,6 @@ await ensureCoreAssetsAndUserWallets(user.id);
     );
   } catch (error) {
     console.error("Signup error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

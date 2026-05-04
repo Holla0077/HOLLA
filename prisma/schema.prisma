@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -46,13 +47,14 @@ enum LedgerEntryType {
 }
 
 enum VerificationStatus {
-  NONE
+  UNVERIFIED
   PENDING
-  APPROVED
-  REJECTED
+  VERIFIED
 }
 
 model User {
+  role   String   @default("USER")
+
   id           String   @id @default(cuid())
   username     String   @unique
   email        String   @unique
@@ -65,14 +67,15 @@ model User {
   gender      String?
   dateOfBirth DateTime?
 
-  wallets      Wallet[]
-  transactions Transaction[] @relation("UserTransactions")
+  wallets          Wallet[]
+  ledgerEntries    LedgerEntry[]
+  transactions     Transaction[]     @relation("UserTransactions")
   topupRequests    TopupRequest[]
   withdrawRequests WithdrawRequest[]
 
   isVerified         Boolean            @default(false)
   verifiedAt         DateTime?
-  verificationStatus VerificationStatus @default(NONE)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
 
   passwordResetTokens PasswordResetToken[]
   kycDocument         KycDocument?
@@ -82,7 +85,7 @@ model User {
 model CryptoAddress {
   id        String   @id @default(cuid())
   userId    String
-  coin      String   // "BTC" | "ETH" etc.
+  coin      String // "BTC" | "ETH" etc.
   address   String   @unique
   hdIndex   Int
   createdAt DateTime @default(now())
@@ -165,51 +168,52 @@ model Wallet {
   // money in minor units (e.g. pesewas, satoshis)
   balance BigInt @default(0) @db.BigInt
 
-  transactionsFrom Transaction[] @relation("FromWallet")
-  transactionsTo   Transaction[] @relation("ToWallet")
+  transactionsFrom Transaction[]     @relation("FromWallet")
+  transactionsTo   Transaction[]     @relation("ToWallet")
   ledgerEntries    LedgerEntry[]
   topupRequests    TopupRequest[]
   withdrawRequests WithdrawRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  isSystem  Boolean  @default(false)
 
   @@unique([userId, assetId])
 }
 
 model TopupRequest {
-  id          String   @id @default(cuid())
-  userId      String
-  walletId    String
-  amount      BigInt   // store in pesewas (GHS * 100)
-  phone       String
-  network     String   // "MTN" | "TELECEL" | "AT"
-  status      String   @default("PENDING") // PENDING | COMPLETED | FAILED | CANCELED
-  externalRef String?  // MTN referenceId (UUID) sent to MoMo API
+  id             String   @id @default(cuid())
+  userId         String
+  walletId       String
+  amount         BigInt // store in pesewas (GHS * 100)
+  phone          String
+  network        String // "MTN" | "TELECEL" | "AT"
+  status         String   @default("PENDING") // PENDING | COMPLETED | FAILED | CANCELED
+  externalRef    String? // MTN referenceId (UUID) sent to MoMo API
   providerStatus String? // raw status from MTN callback / poll: SUCCESSFUL | FAILED | PENDING
   failureReason  String? // reason text if failed
   transactionId  String? // linked Transaction record id
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id])
-  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
 }
 
 model WithdrawRequest {
-  id          String   @id @default(cuid())
-  userId      String
-  walletId    String
-  amount      BigInt   // pesewas
-  phone       String
-  network     String
-  status      String   @default("PENDING") // PENDING | COMPLETED | FAILED
-  externalRef String?  // MTN referenceId
+  id             String   @id @default(cuid())
+  userId         String
+  walletId       String
+  amount         BigInt // pesewas
+  phone          String
+  network        String
+  status         String   @default("PENDING") // PENDING | COMPLETED | FAILED
+  externalRef    String? // MTN referenceId
   providerStatus String?
   failureReason  String?
   transactionId  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user   User   @relation(fields: [userId], references: [id])
   wallet Wallet @relation(fields: [walletId], references: [id])
@@ -243,32 +247,31 @@ model Transaction {
   reference String? @unique
   metadata  Json?
 
-  ledgerEntries LedgerEntry[]
-  feeCharges    FeeCharge[]
+  feeCharges FeeCharge[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model LedgerEntry {
-  id String @id @default(cuid())
+  id           String   @id @default(uuid())
+  userId       String
+  walletId     String
+  assetId      String
+  amount       BigInt // signed: positive for credit, negative for debit
+  balanceAfter BigInt
+  type         String // e.g., "DEPOSIT", "CONVERSION"
+  direction    String // "CREDIT" or "DEBIT"
+  reference    String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
 
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
-  transactionId String
+  user   User   @relation(fields: [userId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
+  asset  Asset  @relation(fields: [assetId], references: [id])
 
-  wallet   Wallet? @relation(fields: [walletId], references: [id])
-  walletId String?
-
-  asset   Asset  @relation(fields: [assetId], references: [id])
-  assetId String
-
-  // DEBIT or CREDIT for bookkeeping
-  entryType LedgerEntryType
-
-  // signed amount in minor units; sum of all entries per asset per transaction must be 0
-  amount BigInt @db.BigInt
-
-  createdAt DateTime @default(now())
+  @@index([walletId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model FeeRule {
@@ -309,12 +312,12 @@ model FeeCharge {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  token     String   @unique
+  token     String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

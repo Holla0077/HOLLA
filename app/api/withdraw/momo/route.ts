@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/session";
 import prisma from "@/lib/prisma";
 import { transfer, normalizePhone } from "@/lib/mtn-momo";
 import { TransactionMethod } from "@prisma/client";
+import { rateLimit } from "@/src/shared/utils/rate-limiter";
 
 function bad(msg: string, code = 400) {
   return NextResponse.json({ error: msg }, { status: code });
@@ -23,6 +24,11 @@ function networkToMethod(network: string): TransactionMethod {
 }
 
 export async function POST(req: Request) {
+const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1';
+if (!rateLimit(ip, 2, 60_000)) {   // max 2 withdrawal attempts per minute
+  return NextResponse.json({ error: 'Withdrawal rate limit reached. Please wait.' }, { status: 429 });
+}
+
   try {
     const session = await getSessionUser();
     if (!session) return bad("Unauthorized", 401);

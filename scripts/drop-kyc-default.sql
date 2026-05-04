@@ -1,0 +1,1 @@
+ALTER TABLE "KycDocument" ALTER COLUMN "status" DROP DEFAULT;

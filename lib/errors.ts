@@ -1,0 +1,1 @@
+export * from '@/src/shared/errors/app-errors';

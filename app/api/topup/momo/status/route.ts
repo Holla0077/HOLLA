@@ -1,107 +1,30 @@
-/**
- * GET /api/topup/momo/status?ref=<referenceId>
- *
- * Poll the MTN MoMo status of a pending collection and, on success, credit the wallet.
- * The frontend calls this every few seconds until it gets COMPLETED or FAILED.
- */
-import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/session";
-import prisma from "@/lib/prisma";
-import { getCollectionStatus } from "@/lib/mtn-momo";
-import { sendTransactionEmail } from "@/lib/email";
+import { NextRequest, NextResponse } from 'next/server';
+import { AuthService } from '@/src/domains/auth/services/auth.service';
+import { CollectionService } from '@/src/domains/payments/momo/services/collection.service';
+import { AppError } from '@/src/shared/errors/app-errors';
 
-function bad(msg: string, code = 400) {
-  return NextResponse.json({ error: msg }, { status: code });
-}
-
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const session = await getSessionUser();
-    if (!session) return bad("Unauthorized", 401);
+    const user = await AuthService.getSessionUser();
+    if (!user) throw new AppError('Unauthorized', 401);
 
-    const url = new URL(req.url);
-    const ref = url.searchParams.get("ref");
-    if (!ref) return bad("ref (referenceId) is required");
+    const { searchParams } = new URL(req.url);
+    const ref = searchParams.get('ref');
+    if (!ref) throw new AppError('ref parameter required', 400);
 
-    const topupReq = await prisma.topupRequest.findFirst({
-      where: { externalRef: ref, userId: session.id },
-    });
-    if (!topupReq) return bad("Topup request not found", 404);
+    const result = await CollectionService.checkAndCompleteTopUp(ref, user.id);
+    const message = result.status === 'COMPLETED'
+      ? 'Top-up completed successfully.'
+      : result.status === 'FAILED'
+        ? `Payment failed: ${result.reason || 'Declined'}`
+        : 'Waiting for approval...';
 
-    // Already resolved — return cached status
-    if (topupReq.status === "COMPLETED") {
-      return NextResponse.json({ status: "COMPLETED", message: "Payment successful. Your wallet has been credited." });
+    return NextResponse.json({ status: result.status, message });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }
-    if (topupReq.status === "FAILED") {
-      return NextResponse.json({ status: "FAILED", message: topupReq.failureReason || "Payment failed." });
-    }
-
-    // Poll MTN
-    const momoStatus = await getCollectionStatus(ref);
-
-    if (momoStatus.status === "SUCCESSFUL") {
-      // Credit the wallet atomically
-      await prisma.$transaction(async (db) => {
-        await db.wallet.update({
-          where: { id: topupReq.walletId },
-          data: { balance: { increment: topupReq.amount } },
-        });
-
-        await db.topupRequest.update({
-          where: { id: topupReq.id },
-          data: { status: "COMPLETED", providerStatus: "SUCCESSFUL" },
-        });
-
-        if (topupReq.transactionId) {
-          await db.transaction.update({
-            where: { id: topupReq.transactionId },
-            data: {
-              status: "COMPLETED",
-              metadata: {
-                topupRequestId: topupReq.id,
-                phone: topupReq.phone,
-                network: topupReq.network,
-                type: "TOPUP",
-                financialTransactionId: momoStatus.financialTransactionId,
-              },
-            },
-          });
-        }
-      });
-
-      // Fire receipt email (non-blocking)
-      const ghsAmount = `GH₵ ${(Number(topupReq.amount) / 100).toFixed(2)}`;
-      prisma.user.findUnique({ where: { id: session.id }, select: { email: true, username: true } })
-        .then((u) => u && sendTransactionEmail({
-          to: u.email,
-          username: u.username,
-          type: "topup",
-          amount: ghsAmount,
-          reference: ref,
-          method: `${topupReq.network} MoMo`,
-        }))
-        .catch(console.error);
-
-      return NextResponse.json({
-        status: "COMPLETED",
-        message: `${ghsAmount} has been added to your wallet.`,
-      });
-    }
-
-    if (momoStatus.status === "FAILED") {
-      await prisma.topupRequest.update({
-        where: { id: topupReq.id },
-        data: { status: "FAILED", providerStatus: "FAILED", failureReason: momoStatus.reason },
-      });
-      if (topupReq.transactionId) {
-        await prisma.transaction.update({ where: { id: topupReq.transactionId }, data: { status: "FAILED" } });
-      }
-      return NextResponse.json({ status: "FAILED", message: momoStatus.reason || "Payment was declined or timed out." });
-    }
-
-    return NextResponse.json({ status: "PENDING", message: "Waiting for approval on your phone…" });
-  } catch (e) {
-    console.error("[topup/momo/status]", e);
-    return bad(e instanceof Error ? e.message : "Status check failed", 500);
+    console.error('[topup/momo/status]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
