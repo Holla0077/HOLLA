@@ -1,66 +1,39 @@
-import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
-import { auditLog } from "@/lib/audit";
-import prisma from "@/lib/prisma";
-import { sendVerificationStatusEmail } from "@/lib/email";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/src/shared/database/prisma";
+import { requireRole } from "@/src/shared/guards/auth.guard";
 
-export async function GET() {
-  if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function PUT(req: NextRequest) {
+  try {
+    await requireRole("ADMIN"); // only admins
 
-  const docs = await prisma.kycDocument.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    include: {
-      user: { select: { id: true, username: true, email: true, phone: true, fullName: true, createdAt: true } },
-    },
-  });
+    const body = await req.json();
+    const { kycId, status, adminNote } = body;
 
-  return NextResponse.json({ docs });
-}
+    if (!kycId || !status) {
+      return NextResponse.json({ error: "Missing kycId or status" }, { status: 400 });
+    }
 
-export async function PATCH(req: Request) {
-  if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Map old-approved/rejected to new values if needed, or accept only new values
+    let newStatus: "VERIFIED" | "UNVERIFIED" | "PENDING";
+    if (status === "APPROVED" || status === "VERIFIED") newStatus = "VERIFIED";
+    else if (status === "REJECTED" || status === "UNVERIFIED") newStatus = "UNVERIFIED";
+    else if (status === "PENDING") newStatus = "PENDING";
+    else return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
 
-  const { kycId, action, adminNote } = await req.json();
-  if (!kycId || !["approve", "reject"].includes(action)) {
-    return NextResponse.json({ error: "kycId and action (approve|reject) required" }, { status: 400 });
-  }
-
-  const doc = await prisma.kycDocument.findUnique({ where: { id: kycId }, include: { user: true } });
-  if (!doc) return NextResponse.json({ error: "KYC document not found" }, { status: 404 });
-
-  const newStatus = action === "approve" ? "APPROVED" : "REJECTED";
-  const isVerified = action === "approve";
-
-  await prisma.$transaction([
-    prisma.kycDocument.update({
+    const updated = await prisma.kycDocument.update({
       where: { id: kycId },
       data: {
         status: newStatus,
         adminNote: adminNote ?? null,
         reviewedAt: new Date(),
-        reviewedBy: "admin",
+        reviewedBy: "admin", // or use authenticated user's ID
       },
-    }),
-    prisma.user.update({
-      where: { id: doc.userId },
-      data: {
-        isVerified,
-        verifiedAt: isVerified ? new Date() : null,
-        verificationStatus: newStatus,
-      },
-    }),
-  ]);
+    });
 
-  await auditLog(`kyc_${action}`, doc.userId, { kycId, adminNote: adminNote ?? null });
-
-  // Send email notification to the user
-  sendVerificationStatusEmail({
-    to: doc.user.email,
-    username: doc.user.username,
-    status: newStatus as "APPROVED" | "REJECTED",
-    adminNote: adminNote ?? undefined,
-  }).catch((err) => console.error("[email kyc notification]", err));
-
-  return NextResponse.json({ ok: true, status: newStatus });
+    return NextResponse.json({ success: true, kyc: updated });
+  } catch (error) {
+    console.error("[admin/kyc]", error);
+    const message = error instanceof Error ? error.message : "KYC update failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
