@@ -1,21 +1,17 @@
+import { Prisma } from '@prisma/client';
 import { LedgerEntryType, LedgerDirection } from './types';
 
 export interface CreateEntryParams {
   userId: string;
   walletId: string;
   assetId: string;
-  amount: bigint; // always positive
+  amount: bigint;
   type: LedgerEntryType;
   direction: LedgerDirection;
   reference?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }
 
-/**
- * Builds the data needed to create a LedgerEntry, automatically
- * computing the signed amount (positive for credit, negative for debit)
- * and the new balance after the entry.
- */
 export class EntryBuilder {
   constructor(private lastBalance: bigint = 0n) {}
 
@@ -31,7 +27,7 @@ export class EntryBuilder {
       type: params.type,
       direction: params.direction,
       reference: params.reference,
-      metadata: params.metadata || {},
+      metadata: params.metadata ?? ({} as Prisma.InputJsonValue),
     };
   }
 }
