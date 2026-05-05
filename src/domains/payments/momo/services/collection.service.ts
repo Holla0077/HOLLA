@@ -1,3 +1,4 @@
+import { FeeService } from '@/src/domains/fees/services/fee.service';
 import prisma from '@/src/shared/database/prisma';
 import { LedgerService } from '@/src/domains/ledger/services/ledger.service';
 import { requestToPay, getCollectionStatus, normalizePhone } from '@/lib/mtn-momo'; // temporary – will migrate later
@@ -114,16 +115,34 @@ export class CollectionService {
         });
 
         // Use LedgerService to credit wallet
-        await LedgerService.createEntry(db, {
-          userId,
-          walletId,
-          assetId: wallet.assetId,
-          amount: amountPesewas,
-          type: 'DEPOSIT',
-          direction: 'CREDIT',
-          reference: `topup_${topupReq.id}`,
-          metadata: { phone, network },
-        });
+        // Calculate fee and net amount
+const topupFee = FeeService.calculateFee(amountPesewas, 'TOPUP');
+const netAmount = amountPesewas - topupFee;
+
+// Credit net amount to user
+await LedgerService.createEntry(db, {
+  userId,
+  walletId,
+  assetId: wallet.assetId,
+  amount: netAmount,
+  type: 'DEPOSIT',
+  direction: 'CREDIT',
+  reference: `topup_${topupReq.id}`,
+  metadata: { phone, network, gross: amountPesewas.toString(), fee: topupFee.toString() },
+});
+
+// Charge fee to treasury
+if (topupFee > 0n) {
+  await FeeService.chargeFee({
+    tx: db,
+    userId,
+    walletId,
+    assetId: wallet.assetId,
+    feeAmount: topupFee,
+    feeType: 'TOPUP',
+    reference: `topup_fee_${topupReq.id}`,
+  });
+}
 
         const tx = await db.transaction.create({
           data: {
@@ -164,16 +183,33 @@ export class CollectionService {
     if (momoStatus.status === 'SUCCESSFUL') {
       await prisma.$transaction(async (db) => {
         // Credit wallet via ledger
-        await LedgerService.createEntry(db, {
-          userId,
-          walletId: topupReq.walletId,
-          assetId: (await db.wallet.findUniqueOrThrow({ where: { id: topupReq.walletId } })).assetId,
-          amount: topupReq.amount,
-          type: 'DEPOSIT',
-          direction: 'CREDIT',
-          reference: `momo_${referenceId}`,
-          metadata: { financialTransactionId: momoStatus.financialTransactionId },
-        });
+        const topupFee = FeeService.calculateFee(topupReq.amount, 'TOPUP');
+const netAmount = topupReq.amount - topupFee;
+
+const wallet = await db.wallet.findUniqueOrThrow({ where: { id: topupReq.walletId } });
+
+await LedgerService.createEntry(db, {
+  userId,
+  walletId: topupReq.walletId,
+  assetId: wallet.assetId,
+  amount: netAmount,
+  type: 'DEPOSIT',
+  direction: 'CREDIT',
+  reference: `momo_${referenceId}`,
+  metadata: { financialTransactionId: momoStatus.financialTransactionId, gross: topupReq.amount.toString(), fee: topupFee.toString() },
+});
+
+if (topupFee > 0n) {
+  await FeeService.chargeFee({
+    tx: db,
+    userId,
+    walletId: topupReq.walletId,
+    assetId: wallet.assetId,
+    feeAmount: topupFee,
+    feeType: 'TOPUP',
+    reference: `topup_fee_${referenceId}`,
+  });
+}
 
         await db.topupRequest.update({
           where: { id: topupReq.id },

@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -53,7 +52,7 @@ enum VerificationStatus {
 }
 
 model User {
-  role   String   @default("USER")
+  role String @default("USER")
 
   id           String   @id @default(cuid())
   username     String   @unique
@@ -80,6 +79,12 @@ model User {
   passwordResetTokens PasswordResetToken[]
   kycDocument         KycDocument?
   cryptoAddresses     CryptoAddress[]
+  Card                Card[]
+
+  supportTickets  SupportTicket[]
+  assignedTickets SupportTicket[] @relation("AssignedTickets")
+  ticketMessages  TicketMessage[]
+  merchant        Merchant?
 }
 
 model CryptoAddress {
@@ -357,4 +362,173 @@ enum SupportSender {
   USER
   AGENT
   SYSTEM
+}
+
+enum CardType {
+  NIGHT
+  GO_EAT
+  BTC_GIFT
+}
+
+enum CardStatus {
+  CREATED
+  ACTIVATED
+  REDEEMED
+  EXPIRED
+}
+
+model Card {
+  id             String     @id @default(uuid())
+  type           CardType
+  status         CardStatus @default(CREATED)
+  ownerId        String?
+  owner          User?      @relation(fields: [ownerId], references: [id])
+  currency       String     @default("GHS")
+  initialValue   BigInt
+  remainingValue BigInt
+  isReloadable   Boolean    @default(false)
+  kycRequired    Boolean    @default(false)
+  expiresAt      DateTime?
+  activatedAt    DateTime?
+  redeemedAt     DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  transactions CardTransaction[]
+  rules        CardRule[]
+
+  @@index([ownerId])
+}
+
+model CardTransaction {
+  id           String   @id @default(uuid())
+  cardId       String
+  card         Card     @relation(fields: [cardId], references: [id])
+  type         String
+  amount       BigInt
+  balanceAfter BigInt?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([cardId])
+}
+
+model CardRule {
+  id               String  @id @default(uuid())
+  cardId           String
+  card             Card    @relation(fields: [cardId], references: [id])
+  maxSingleTopUp   BigInt?
+  maxTotalValue    BigInt?
+  allowedMerchants String?
+
+  @@index([cardId])
+}
+
+// ---------- Customer Care ----------
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model SupportTicket {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id])
+  subject    String
+  status     TicketStatus @default(OPEN)
+  priority   String       @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  assignedTo String?
+  assigned   User?        @relation("AssignedTickets", fields: [assignedTo], references: [id])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  messages TicketMessage[]
+
+  @@index([userId])
+  @@index([assignedTo])
+}
+
+model TicketMessage {
+  id        String        @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id])
+  senderId  String
+  sender    User          @relation(fields: [senderId], references: [id])
+  content   String
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
+// ---------- Merchant System ----------
+
+model Merchant {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  businessName String
+  category     String? // e.g., "Restaurant", "Retail"
+  phone        String?
+  email        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  locations   MerchantLocation[]
+  settlements MerchantSettlement[]
+  qrPayments  QRPayment[]
+
+  @@unique([userId])
+  @@index([userId])
+}
+
+model MerchantLocation {
+  id         String   @id @default(uuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  name       String
+  address    String?
+  city       String?
+  latitude   Float?
+  longitude  Float?
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId])
+}
+
+enum QRPaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+model QRPayment {
+  id         String          @id @default(uuid())
+  merchantId String
+  merchant   Merchant        @relation(fields: [merchantId], references: [id])
+  amount     BigInt
+  currency   String          @default("GHS")
+  status     QRPaymentStatus @default(PENDING)
+  reference  String?
+  paidAt     DateTime?
+  expiresAt  DateTime        @default(now())
+  createdAt  DateTime        @default(now())
+
+  @@index([merchantId])
+}
+
+model MerchantSettlement {
+  id         String   @id @default(uuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  amount     BigInt
+  reference  String?
+  settledAt  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId])
 }

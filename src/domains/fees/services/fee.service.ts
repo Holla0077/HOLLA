@@ -4,7 +4,7 @@ import { LedgerService } from '@/src/domains/ledger/services/ledger.service';
 import { Prisma } from '@prisma/client';
 
 
-export type FeeType = 'TRANSFER' | 'WITHDRAWAL' | 'TOPUP' | 'CONVERSION' | 'DEPOSIT_CRYPTO';
+export type FeeType = 'TRANSFER' | 'WITHDRAWAL' | 'TOPUP' | 'SELL' | 'DEPOSIT_CRYPTO';
 export interface FeeRule {
   type: FeeType;
   fixed: bigint;       // flat fee (e.g., 100n = GH₵1)
@@ -38,13 +38,13 @@ const defaultRules: FeeRule[] = [
   {
     type: 'TOPUP',
     fixed: 0n,
-    percentage: 0,                    // free top‑ups
+    percentage: 0.025,                    // 2.5% top‑ups
     treasuryAssetCode: 'GHS',
   },
   {
-    type: 'CONVERSION',
+    type: 'SELL',
     fixed: 0n,
-    percentage: 0,                    // free conversions
+    percentage: 0,                    // free Sell (for now)
     treasuryAssetCode: 'GHS',
   },
 ];

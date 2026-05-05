@@ -24,7 +24,7 @@ function derivePrivateKey(hdIndex: number): Buffer {
   const coinType = net === bitcoin.networks.testnet ? 1 : 0;
   const child = root.derivePath(`m/44'/${coinType}'/0'/0/${hdIndex}`);
   if (!child.privateKey) throw new Error('No private key');
-  return child.privateKey as Buffer;
+  return Buffer.from(child.privateKey);
 }
 
 export class CryptoService {
@@ -113,9 +113,8 @@ export class CryptoService {
     }
 
     // Sign
-    const privateKey = derivePrivateKey(hdIndex) as Buffer;
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-
+    const privateKey = derivePrivateKey(hdIndex);
+    const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey));
     await psbt.signAllInputsAsync(keyPair);
     psbt.finalizeAllInputs();
 
