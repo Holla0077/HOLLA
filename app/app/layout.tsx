@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import HollaLogo from "@/public/brand/components/HollaLogo";
 
@@ -9,15 +9,16 @@ const HEADER_H = 64;
 const SIDEBAR_W = 280;
 
 const sideNav = [
-  { href: "/app/home", label: "SUMMARY", icon: SummaryIcon },
-  { href: "/app/activity", label: "ACTIVITY", icon: ActivityIcon },
-  { href: "/app/send-receive", label: "SEND /\nRECEIVE", icon: SendReceiveIcon },
-  { href: "/app/help", label: "HELP", icon: HelpIcon },
-  { href: "/app/settings", label: "SETTINGS", icon: SettingsIcon },
+  { href: "/app/home", label: "Dashboard", icon: DashboardIcon },
+  { href: "/app/activity", label: "Activity", icon: ActivityIcon },
+  { href: "/app/send-receive", label: "Send / Receive", icon: SendReceiveIcon },
+  { href: "/app/crypto", label: "Crypto", icon: CryptoIcon },
+  { href: "/app/cards", label: "Cards", icon: CardsIcon },
+  { href: "/app/referrals", label: "Referrals", icon: ReferralsIcon },
+  { href: "/app/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 /* ── Icons ─────────────────────────────────────────────── */
-
 function IconWrap({ children }: { children: ReactNode }) {
   return (
     <span className="grid h-9 w-9 place-items-center rounded-full border border-slate-200/15 bg-slate-900/40">
@@ -26,7 +27,7 @@ function IconWrap({ children }: { children: ReactNode }) {
   );
 }
 
-function SummaryIcon() {
+function DashboardIcon() {
   return (
     <IconWrap>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-current">
@@ -61,12 +62,34 @@ function SendReceiveIcon() {
   );
 }
 
-function HelpIcon() {
+function CryptoIcon() {
   return (
     <IconWrap>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-current">
-        <path d="M12 18h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-        <path d="M9.5 9a2.5 2.5 0 1 1 4.2 1.8c-.8.6-1.2 1-1.2 2.2v.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </IconWrap>
+  );
+}
+
+function CardsIcon() {
+  return (
+    <IconWrap>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-current">
+        <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+        <path d="M1 10h22" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    </IconWrap>
+  );
+}
+
+function ReferralsIcon() {
+  return (
+    <IconWrap>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-current">
+        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
+        <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </IconWrap>
   );
@@ -84,7 +107,6 @@ function SettingsIcon() {
 }
 
 /* ── Hamburger button ───────────────────────────────────── */
-
 function HamburgerIcon({ open }: { open: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -105,18 +127,16 @@ function HamburgerIcon({ open }: { open: boolean }) {
 }
 
 /* ── Layout ─────────────────────────────────────────────── */
-
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const sp = useSearchParams();
-
-  const mode = (sp.get("mode") || "cash").toLowerCase() === "crypto" ? "crypto" : "cash";
 
   const [userInitials, setUserInitials] = useState("ME");
+  const [fullName, setFullName] = useState("");
   const [impersonated, setImpersonated] = useState(false);
   const [impersonatedUsername, setImpersonatedUsername] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/me")
@@ -130,8 +150,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
             : parts[0].slice(0, 2).toUpperCase();
           setUserInitials(initials);
+          setFullName(u.fullName);
         } else if (u.username) {
           setUserInitials((u.username as string).slice(0, 2).toUpperCase());
+          setFullName(u.username);
         }
         if (d.impersonated) {
           setImpersonated(true);
@@ -159,8 +181,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  const showTopToggle = pathname === "/app/home" || pathname.startsWith("/app/send-receive");
-  const toggleBase = pathname.startsWith("/app/send-receive") ? "/app/send-receive" : "/app/home";
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/app/activity?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#070B1A] text-slate-100">
@@ -182,8 +208,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="flex h-full items-center justify-between px-4 md:px-6">
 
           {/* LEFT — hamburger (mobile) + logo */}
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {/* Hamburger — mobile only */}
+          <div className="flex flex-shrink-0 items-center gap-4">
             <button
               type="button"
               aria-label={sidebarOpen ? "Close menu" : "Open menu"}
@@ -193,62 +218,57 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <HamburgerIcon open={sidebarOpen} />
             </button>
 
-            {/* Logo — base img is h-12; scale pushes visual out, so reserve space */}
-            <Link
-              href="/app/home"
-              className="flex items-center"
-              style={{ paddingLeft: 40, paddingRight: 20 }}
-            >
-              <HollaLogo variant="icon" className="scale-[3.0]" />
+            <Link href="/app/home" className="flex items-center">
+              <HollaLogo variant="icon" className="scale-[2.5]" />
             </Link>
           </div>
 
-          {/* CENTER — CASH / CRYPTO toggle */}
-          {showTopToggle ? (
-            <div className="flex items-center">
-              <div className="flex items-center rounded-2xl border border-white/[0.1] bg-white/[0.04] p-1 gap-0.5">
-                <Link
-                  href={`${toggleBase}?mode=cash`}
-                  className={[
-                    "rounded-xl px-5 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200",
-                    mode === "cash"
-                      ? "bg-emerald-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.35)]"
-                      : "text-white/60 hover:text-white/90",
-                  ].join(" ")}
-                >
-                  CASH
-                </Link>
-                <Link
-                  href={`${toggleBase}?mode=crypto`}
-                  className={[
-                    "rounded-xl px-5 py-1.5 text-sm font-semibold tracking-wide transition-all duration-200",
-                    mode === "crypto"
-                      ? "bg-emerald-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.35)]"
-                      : "text-white/60 hover:text-white/90",
-                  ].join(" ")}
-                >
-                  CRYPTO
-                </Link>
-              </div>
+          {/* CENTER — search bar */}
+          <form onSubmit={handleSearch} className="hidden md:block flex-1 max-w-xl mx-4">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search anything..."
+                className="w-full pl-10 pr-4 py-2 rounded-full border border-slate-700 bg-slate-900/60 text-sm text-white placeholder-slate-400 outline-none focus:border-emerald-400"
+              />
             </div>
-          ) : <div />}
+          </form>
 
-          {/* RIGHT — secure indicator + account */}
-          <div className="flex items-center gap-4 text-sm text-slate-200/80">
-            <div className="hidden sm:flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span className="text-[13px]">Secure</span>
-            </div>
+          {/* RIGHT — notification + user profile */}
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              className="relative h-9 w-9 rounded-full border border-slate-700 bg-slate-900/40 flex items-center justify-center text-slate-300 hover:border-slate-500 transition-colors"
+              title="Notifications"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 text-[10px] font-bold flex items-center justify-center">3</span>
+            </button>
 
+            {/* User profile */}
             <div className="relative group">
-              <button
-                type="button"
-                className="h-9 w-9 rounded-full bg-slate-900/40 flex items-center justify-center text-[13px] font-semibold text-emerald-300 border border-slate-200/20"
-                title="Account"
-              >
-                {userInitials}
+              <button className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-sm font-bold text-emerald-300">
+                  {userInitials}
+                </div>
+                <div className="hidden lg:block text-left">
+                  <div className="text-sm font-medium text-white">{fullName || "User"}</div>
+                  <div className="text-xs text-emerald-400">Verified</div>
+                </div>
+                <svg className="hidden lg:block w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
 
+              {/* Dropdown */}
               <div className="invisible opacity-0 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 transition-all absolute right-0 mt-3 w-44 rounded-2xl border border-slate-200/15 bg-[#070B1A] shadow-xl p-2">
                 <Link
                   href="/app/settings"
@@ -297,7 +317,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <aside
         className={[
           "fixed left-0 z-40 bg-[#070B1A] transition-transform duration-300 ease-in-out",
-          // Mobile: slide in/out; Desktop: always visible
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
           "lg:translate-x-0",
         ].join(" ")}
@@ -312,7 +331,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-slate-200/20 to-transparent" />
 
         {/* Nav items */}
-        <nav className="px-6 py-7">
+        <nav className="px-6 py-7 flex flex-col h-full">
           <div className="space-y-1">
             {sideNav.map((item) => {
               const active = isActive(item.href);
@@ -338,14 +357,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     <Icon />
                   </span>
 
-                  <span
-                    className="text-[15px] font-semibold leading-tight tracking-wide"
-                    style={{ whiteSpace: "pre-line" }}
-                  >
+                  <span className="text-[15px] font-semibold leading-tight tracking-wide">
                     {item.label}
                   </span>
 
-                  {/* Active indicator bar */}
                   {active && (
                     <span className="ml-auto h-5 w-[3px] rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
                   )}
@@ -355,7 +370,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
 
           {/* Sidebar footer */}
-          <div className="mt-8 border-t border-slate-200/10 pt-6">
+          <div className="mt-auto border-t border-slate-200/10 pt-6 space-y-1">
+            <Link
+              href="/app/help"
+              className="flex items-center gap-3.5 rounded-xl px-3 py-3 text-[14px] text-slate-400 hover:bg-white/[0.04] hover:text-white/80 transition-colors"
+            >
+              <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-slate-200/15 bg-slate-900/40">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 18h.01" />
+                  <path d="M9.5 9a2.5 2.5 0 1 1 4.2 1.8c-.8.6-1.2 1-1.2 2.2v.5" />
+                </svg>
+              </span>
+              Help Center
+            </Link>
             <button
               onClick={handleLogout}
               className="flex w-full items-center gap-3.5 rounded-xl px-3 py-3 text-[14px] text-slate-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
@@ -367,7 +394,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
               </span>
-              <span className="font-medium">Log out</span>
+              Logout
             </button>
           </div>
         </nav>
