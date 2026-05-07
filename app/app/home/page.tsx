@@ -383,7 +383,7 @@ export default function HomePage() {
 </div>
         {/* RECENT TRANSACTIONS & SPENDING OVERVIEW (top-aligned) */}
         <div className="grid gap-6 lg:grid-cols-[1fr_1fr] mb-8 items-start">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 h-[40rem] overflow-y-auto">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 h-auto lg:h-[40rem] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm font-semibold uppercase tracking-wider text-white">Recent Transactions</div>
               <Link href="/app/activity" className="text-xs text-emerald-400 hover:text-emerald-300">View All</Link>
@@ -449,7 +449,7 @@ export default function HomePage() {
   </div>
 
   {/* Area Chart */}
-<div className="flex-1 w-full min-w-0 pt-4">
+<div className="flex-1 w-full min-w-0 pt-4 -ml-4 sm:ml-0">
   <ResponsiveContainer width="100%" height="100%">
     <AreaChart
       data={spendingChartData}
