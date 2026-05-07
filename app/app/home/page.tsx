@@ -226,6 +226,7 @@ export default function HomePage() {
   const barWidth = 100 / monthlySpendingData.length;
 
   return (
+   <div className="min-h-screen bg-[#070B1A] text-white pb-20 overflow-x-hidden">
     <div className="min-h-screen bg-[#070B1A] text-white pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {showVerifyBanner && (
@@ -690,5 +691,6 @@ export default function HomePage() {
         </div>
       )}
     </div>
+   </div>
   );
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
 export const metadata: Metadata = {
   title: "KashBoy — Your Smart Money Companion",
   description: "Send money, top up your wallet, and manage GHS & crypto in one clean dashboard. Built for Ghana.",
