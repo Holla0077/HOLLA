@@ -218,9 +218,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <HamburgerIcon open={sidebarOpen} />
             </button>
 
-            <Link href="/app/home" className="flex items-center">
-              <HollaLogo variant="icon" className="scale-[2.5]" />
-            </Link>
+            <Link href="/app/home" className="flex items-center shrink-0">
+  <HollaLogo variant="icon" className="scale-[2.0] sm:scale-[2.5]" />
+</Link>
           </div>
 
           {/* CENTER — search bar */}

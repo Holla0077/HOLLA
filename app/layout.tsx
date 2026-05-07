@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "KashBoy — Your Smart Money Companion",
   description: "Send money, top up your wallet, and manage GHS & crypto in one clean dashboard. Built for Ghana.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased overflow-x-hidden bg-[#070B1A]">
         {children}
       </body>
     </html>
