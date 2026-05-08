@@ -189,7 +189,7 @@ export default function CryptoPage() {
       <div className="max-w-[1500px] mx-auto px-5 lg:px-8 py-8">
         {/* PAGE TITLE */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight"> 
             Crypto
           </h1>
 
@@ -218,11 +218,11 @@ export default function CryptoPage() {
         </div>
 
         {/* TOP GRID */}
-        <div className="grid grid-cols-1 xl:grid-cols-[58%_42%] gap-6 items-start">
+        <div className="grid grid-cols-[58%_42%] gap-4 sm:gap-6 items-start">
           {/* LEFT SIDE */}
           <div className="space-y-6">
             {/* PORTFOLIO PANEL */}
-            <div className="h-[260px] rounded-3xl border border-slate-800 bg-[#0B1220]/90 overflow-hidden relative">
+            <div className="h-48 sm:h-56 md:h-64 lg:h-[260px] rounded-3xl border border-slate-800 bg-[#0B1220]/90 overflow-hidden relative">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_40%)]" />
 
               <div className="relative p-6 h-full flex flex-col">
@@ -287,7 +287,7 @@ export default function CryptoPage() {
             </div>
 
             {/* ASSETS PANEL */}
-            <div className="h-[360px] rounded-3xl border border-slate-800 bg-[#0B1220]/85 p-5 overflow-hidden">
+            <div className="h-56 sm:h-64 md:h-80 lg:h-[360px] rounded-3xl border border-slate-800 bg-[#0B1220]/85 p-5 overflow-hidden">
               <div className="flex items-center justify-between mb-5">
                 <div className="text-lg font-semibold">
                   Your Assets
@@ -358,7 +358,7 @@ export default function CryptoPage() {
           </div>
 
           {/* RIGHT SIDE */}
-          <div className="h-[640px] rounded-3xl border border-slate-800 bg-[#0B1220]/85 overflow-hidden">
+          <div className="h-auto lg:h-[640px] rounded-3xl border border-slate-800 bg-[#0B1220]/85 overflow-hidden">
             {/* OVERVIEW */}
             {activeTab === "Overview" && selected && (
               <div className="h-full flex flex-col">
