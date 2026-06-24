@@ -34,7 +34,7 @@ function deriveChildNode(hdIndex: number) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionUser();
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { AuthService } from "@/src/domains/auth/services/auth.service";
 
 function bad(msg: string, code = 400) {
   return NextResponse.json({ error: msg }, { status: code });
@@ -20,12 +19,8 @@ function maskCard(cardNumber: string) {
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("holla_session")?.value;
-    if (!token) return bad("Unauthorized", 401);
-
-    const payload = verifyToken(token) as { id?: string } | null;
-    const userId = payload?.id;
+    const session = await AuthService.getSessionUser(req);
+    const userId = session?.id;
     if (!userId) return bad("Unauthorized", 401);
 
     const user = await prisma.user.findUnique({

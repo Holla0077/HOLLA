@@ -11,11 +11,51 @@ const SIDEBAR_W = 280;
 const sideNav = [
   { href: "/app/home", label: "Dashboard", icon: DashboardIcon },
   { href: "/app/activity", label: "Activity", icon: ActivityIcon },
-  { href: "/app/send-receive", label: "Send / Receive", icon: SendReceiveIcon },
   { href: "/app/crypto", label: "Crypto", icon: CryptoIcon },
   { href: "/app/cards", label: "Cards", icon: CardsIcon },
   { href: "/app/referrals", label: "Referrals", icon: ReferralsIcon },
   { href: "/app/settings", label: "Settings", icon: SettingsIcon },
+];
+
+// TODO: Replace this local preview list with a protected notifications API
+// when notification persistence is added to the backend.
+const notificationPreview = [
+  {
+    id: "topup-received",
+    icon: "₵",
+    title: "Wallet top-up received",
+    message: "Your GHS wallet top-up request has been received.",
+    time: "2 min ago",
+    unread: true,
+    category: "Transactions",
+  },
+  {
+    id: "withdrawal-update",
+    icon: "↗",
+    title: "Withdrawal request update",
+    message: "Your withdrawal request is pending provider confirmation.",
+    time: "18 min ago",
+    unread: true,
+    category: "Transactions",
+  },
+  {
+    id: "card-activation",
+    icon: "◆",
+    title: "Card activation reminder",
+    message: "Activate your Kashboy card to unlock card rewards.",
+    time: "1 hr ago",
+    unread: false,
+    category: "Cards",
+  },
+  {
+    id: "login-alert",
+    icon: "!",
+    title: "Login/security alert",
+    message: "A new login was detected on your account.",
+    time: "Today",
+    unread: true,
+    category: "Security",
+  },
 ];
 
 /* ── Icons ─────────────────────────────────────────────── */
@@ -136,7 +176,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const [impersonated, setImpersonated] = useState(false);
   const [impersonatedUsername, setImpersonatedUsername] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState(notificationPreview);
+  const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const unreadNotifications = notifications.filter((item) => item.unread).length;
 
   useEffect(() => {
     fetch("/api/me")
@@ -164,7 +208,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }, []);
 
   // Close sidebar on route change (mobile nav link tap)
-  useEffect(() => { setSidebarOpen(false); }, [pathname]);
+  useEffect(() => {
+    setSidebarOpen(false);
+    setNotificationsOpen(false);
+  }, [pathname]);
 
   async function exitImpersonation() {
     await fetch("/api/admin/exit-impersonate", { method: "POST" });
@@ -218,8 +265,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <HamburgerIcon open={sidebarOpen} />
             </button>
 
-            <Link href="/app/home" className="flex items-center shrink-0">
-  <HollaLogo variant="icon" className="scale-[2.0] sm:scale-[2.5]" />
+            <Link href="/app/home" className="ml-2 flex items-center shrink-0 sm:ml-18">
+  <HollaLogo variant="icon" className="scale-[4] sm:scale-[4] translate-y-2" />
 </Link>
           </div>
 
@@ -241,17 +288,98 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
           {/* RIGHT — notification + user profile */}
           <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="relative h-9 w-9 rounded-full border border-slate-700 bg-slate-900/40 flex items-center justify-center text-slate-300 hover:border-slate-500 transition-colors"
-              title="Notifications"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 text-[10px] font-bold flex items-center justify-center">3</span>
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                className="relative h-9 w-9 rounded-full border border-slate-700 bg-slate-900/40 flex items-center justify-center text-slate-300 hover:border-slate-500 transition-colors"
+                title="Notifications"
+                aria-expanded={notificationsOpen}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 text-[10px] font-bold flex items-center justify-center">{unreadNotifications}</span>
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-2xl border border-slate-200/15 bg-[#070B1A] shadow-2xl shadow-black/40">
+                  <div className="border-b border-slate-800 bg-slate-900/40 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-white">Notifications</div>
+                        <div className="text-xs text-slate-400">Wallet, card and security alerts</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setNotifications((items) => items.map((item) => ({ ...item, unread: false })))}
+                        className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-300 hover:border-emerald-500/60"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-[420px] overflow-y-auto p-2">
+                    {notifications.length === 0 ? (
+                      <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-5 text-center">
+                        <div className="text-sm font-semibold text-white">No notifications yet</div>
+                        <div className="mt-1 text-xs text-slate-400">Wallet, card and security alerts will appear here.</div>
+                      </div>
+                    ) : (
+                      notifications.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedNotification(item.id);
+                            setNotifications((items) =>
+                              items.map((notification) =>
+                                notification.id === item.id ? { ...notification, unread: false } : notification
+                              )
+                            );
+                          }}
+                          className="w-full rounded-xl border border-transparent px-3 py-3 text-left transition-colors hover:border-slate-700 hover:bg-slate-900/40"
+                        >
+                          <div className="flex gap-3">
+                            <div className="relative grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl border border-slate-700 bg-slate-950/50 text-sm font-black text-emerald-300">
+                              {item.icon}
+                              {item.unread && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-400" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="truncate text-sm font-semibold text-white">{item.title}</div>
+                                <div className="flex-shrink-0 text-[11px] text-slate-500">{item.time}</div>
+                              </div>
+                              <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{item.message}</div>
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                                  {item.category}
+                                </span>
+                                {selectedNotification === item.id && (
+                                  <span className="text-[10px] text-slate-500">Preview selected</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="border-t border-slate-800 bg-slate-900/30 px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => setNotifications((items) => items.filter((item) => item.unread))}
+                      className="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-slate-500"
+                    >
+                      Clear read notifications
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User profile */}
             <div className="relative group">

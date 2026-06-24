@@ -5,10 +5,21 @@ import { signToken } from "@/lib/auth";
 import { rateLimit } from "@/src/shared/utils/rate-limiter";
 
 export async function POST(req: Request) {
-const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1';
-if (!rateLimit(ip, 5, 60_000)) {   // max 5 attempts per minute
-  return NextResponse.json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
-}
+  const ip =
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("x-real-ip") ||
+    "127.0.0.1";
+
+  if (!rateLimit(ip, 5, 60_000)) {
+    return NextResponse.json(
+      {
+        error: "Too many login attempts. Try again later.",
+      },
+      {
+        status: 429,
+      }
+    );
+  }
 
   try {
     const { email, password } = await req.json();
@@ -26,18 +37,48 @@ if (!rateLimit(ip, 5, 60_000)) {   // max 5 attempts per minute
     });
 
     if (!user) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json(
+        {
+          error: "Invalid credentials",
+        },
+        {
+          status: 401,
+        }
+      );
     }
 
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    const isValid = await bcrypt.compare(
+      password,
+      user.passwordHash
+    );
+
     if (!isValid) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json(
+        {
+          error: "Invalid credentials",
+        },
+        {
+          status: 401,
+        }
+      );
     }
 
-    const token = signToken({ id: user.id, email: user.email });
-    const res = NextResponse.json({ message: "Login successful" });
+    const token = signToken({
+      id: user.id,
+      email: user.email,
+    });
 
-    res.cookies.set({
+    const response = NextResponse.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      },
+    });
+
+    response.cookies.set({
       name: "holla_session",
       value: token,
       httpOnly: true,
@@ -47,9 +88,18 @@ if (!rateLimit(ip, 5, 60_000)) {   // max 5 attempts per minute
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    return res;
+    return response;
+
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

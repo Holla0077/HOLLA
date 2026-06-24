@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { AuthService } from "@/src/domains/auth/services/auth.service";
 import { CryptoService } from "@/src/domains/crypto/services/crypto.service";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await AuthService.getSessionUser();
+    const user = await AuthService.getSessionUser(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { address } = await CryptoService.getOrCreateBtcAddress(user.id);

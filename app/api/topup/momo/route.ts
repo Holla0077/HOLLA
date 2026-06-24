@@ -5,7 +5,7 @@ import { AppError } from '@/src/shared/errors/app-errors';
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await AuthService.getSessionUser();
+    const user = await AuthService.getSessionUser(req);
     if (!user) throw new AppError('Unauthorized', 401);
 
     const body = await req.json();

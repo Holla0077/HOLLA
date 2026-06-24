@@ -2,9 +2,14 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth"; // keep existing import for now
 
 export class AuthService {
-  static async getSessionUser() {
+  static async getSessionUser(req?: Request) {
     const cookieStore = await cookies();
-    const token = cookieStore.get("holla_session")?.value;
+    const cookieToken = cookieStore.get("holla_session")?.value;
+    const authHeader = req?.headers.get("authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice("Bearer ".length)
+      : null;
+    const token = cookieToken || bearerToken;
     if (!token) return null;
     const payload = verifyToken(token);
     if (!payload) return null;
@@ -13,6 +18,6 @@ export class AuthService {
 }
 
 // Standalone function for backward compatibility
-export async function getSessionUser() {
-  return AuthService.getSessionUser();
+export async function getSessionUser(req?: Request) {
+  return AuthService.getSessionUser(req);
 }

@@ -10,9 +10,9 @@ const SendSchema = z.object({
   amount: z.string().min(1),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await AuthService.getSessionUser();
+    const user = await AuthService.getSessionUser(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const txs = await prisma.transaction.findMany({
@@ -44,7 +44,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const user = await AuthService.getSessionUser();
+    const user = await AuthService.getSessionUser(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const sender = await prisma.user.findUnique({

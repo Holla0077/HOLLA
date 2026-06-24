@@ -30,7 +30,7 @@ if (!rateLimit(ip, 2, 60_000)) {   // max 2 withdrawal attempts per minute
 }
 
   try {
-    const session = await getSessionUser();
+    const session = await getSessionUser(req);
     if (!session) return bad("Unauthorized", 401);
 
     const user = await prisma.user.findUnique({

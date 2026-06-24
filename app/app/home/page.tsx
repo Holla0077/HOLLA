@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { type InputHTMLAttributes, type ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -28,6 +28,7 @@ type UiTx = {
 };
 
 const GHS_STORAGE: "minor" | "major" = "minor";
+
 
 function toBigIntSafe(v: unknown) {
   try { return BigInt(String(v)); } catch { return 0n; }
@@ -75,6 +76,178 @@ const spendingChartData = [
   { date: '30 May', amount: 4400 },
 ];
 
+const NETWORK_OPTIONS = ["MTN", "TELECEL", "AIRTELTIGO"] as const;
+
+function amountPreview(amount: string) {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return "GHS 0.00";
+  return `GHS ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function isPositiveAmount(amount: string) {
+  const n = Number(amount);
+  return Number.isFinite(n) && n > 0;
+}
+
+function ModalShell({
+  icon,
+  title,
+  subtitle,
+  maxWidth = "max-w-xl",
+  onClose,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  maxWidth?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+      <button
+        type="button"
+        aria-label="Close modal"
+        className="absolute inset-0 cursor-default bg-[#020617]/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className={`relative w-full ${maxWidth} max-h-[88vh] overflow-y-auto rounded-[28px] border border-emerald-500/15 bg-[#07111f]/95 shadow-[0_24px_90px_rgba(0,0,0,0.58)]`}>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/60 to-transparent" />
+        <div className="p-5 sm:p-6">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-400/10 text-sm font-black text-emerald-200 shadow-[0_0_26px_rgba(16,185,129,0.12)]">
+                {icon}
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">{title}</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-400">{subtitle}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-slate-700/80 bg-slate-950/50 px-3 py-1.5 text-sm font-semibold text-slate-300 transition-colors hover:border-emerald-500/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+            >
+              x
+            </button>
+          </div>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModalField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="block">
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</span>
+      {children}
+      {hint && <span className="mt-2 block text-xs text-slate-500">{hint}</span>}
+    </div>
+  );
+}
+
+function ModalInput({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={`w-full rounded-2xl border border-slate-700/80 bg-slate-950/50 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-slate-600 hover:border-slate-600 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/15 ${className}`}
+    />
+  );
+}
+
+function SegmentButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400/30 ${
+        active
+          ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.08)]"
+          : "border-slate-700/80 bg-slate-950/30 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function NetworkSelector({ value, onChange }: { value: string; onChange: (network: string) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {NETWORK_OPTIONS.map((network) => (
+        <button
+          key={network}
+          type="button"
+          onClick={() => onChange(network)}
+          className={`rounded-2xl border px-2 py-3 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400/30 ${
+            value === network
+              ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-100"
+              : "border-slate-700/80 bg-slate-950/30 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+          }`}
+        >
+          {network}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SummaryBox({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-4">
+      <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Summary</div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 text-sm">
+      <span className="text-slate-400">{label}</span>
+      <span className="text-right font-semibold text-white">{value}</span>
+    </div>
+  );
+}
+
+function StatusNotice({ kind, children }: { kind: "error" | "success" | "info"; children: ReactNode }) {
+  const styles = {
+    error: "border-red-500/35 bg-red-500/10 text-red-200",
+    success: "border-emerald-500/35 bg-emerald-500/10 text-emerald-200",
+    info: "border-blue-500/35 bg-blue-500/10 text-blue-200",
+  };
+  return <div className={`rounded-2xl border p-3 text-sm ${styles[kind]}`}>{children}</div>;
+}
+
+function PrimaryModalButton({
+  children,
+  loading,
+  loadingLabel,
+  disabled,
+  onClick,
+}: {
+  children: ReactNode;
+  loading?: boolean;
+  loadingLabel: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled || loading}
+      onClick={onClick}
+      className="w-full rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-black shadow-[0_0_20px_rgba(16,185,129,0.22)] transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-emerald-300/50"
+    >
+      {loading ? loadingLabel : children}
+    </button>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
 
@@ -117,16 +290,31 @@ export default function HomePage() {
 
   const [sendRecipient, setSendRecipient] = useState("");
   const [sendAmount, setSendAmount] = useState("");
+  const [sendNote, setSendNote] = useState("");
+  const [sendConfirming, setSendConfirming] = useState(false);
   const [sendBusy, setSendBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendOk, setSendOk] = useState<string | null>(null);
+  const [receiveCopyOk, setReceiveCopyOk] = useState<string | null>(null);
+  const [qrMerchant, setQrMerchant] = useState("");
+  const [qrBusy, setQrBusy] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrOk, setQrOk] = useState<string | null>(null);
 
-const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?: string; fullName?: string; isVerified?: boolean } | null>(null);
+  const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?: string; fullName?: string; isVerified?: boolean } | null>(null);
+  const [kashPoints, setKashPoints] = useState(0);
 
   useEffect(() => {
     fetch("/api/me")
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.user) { setVerifyStatus(d.user.verificationStatus ?? "NONE"); setMeUser(d.user); } })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/referrals")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setKashPoints(Number(d.pointsBalance || 0)); })
       .catch(() => {});
   }, []);
 
@@ -161,12 +349,127 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
     return "bg-red-500/10 text-red-200 border border-red-500/30 px-2 py-0.5 rounded-full text-[11px] font-medium";
   }
 
+  async function handleTopup() {
+    setTopupError(null);
+    setTopupOk(null);
+    setTopupPending(null);
+    if (!isPositiveAmount(topupAmount)) {
+      setTopupError("Enter a valid amount.");
+      return;
+    }
+    if (!ghsWallet) {
+      setTopupError("No GHS wallet found.");
+      return;
+    }
+    if (fundMethod === "MOMO" && !topupPhone.trim()) {
+      setTopupError("Enter the mobile money phone number.");
+      return;
+    }
+    if (fundMethod === "CARD" && (!topupCardNumber.trim() || !topupCardName.trim() || !topupCardExpiry.trim() || !topupCardCvv.trim())) {
+      setTopupError("Enter all card payment details.");
+      return;
+    }
+
+    setTopupBusy(true);
+    try {
+      const res = fundMethod === "MOMO"
+        ? await fetch("/api/topup/momo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletId: ghsWallet.id, amount: topupAmount, phone: topupPhone, network: topupNetwork }),
+        })
+        : await fetch("/api/topup/card", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletId: ghsWallet.id, amount: topupAmount, cardNumber: topupCardNumber, cardName: topupCardName, expiry: topupCardExpiry, cvv: topupCardCvv }),
+        });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Top up failed.");
+
+      if (data?.status === "PENDING") {
+        setTopupPending(data.message || "Payment request sent. Approve it on your phone to complete funding.");
+      } else {
+        setTopupOk(data?.message || "Wallet funded successfully.");
+      }
+      setTopupAmount("");
+      setTopupPhone("");
+      setTopupCardNumber("");
+      setTopupCardName("");
+      setTopupCardExpiry("");
+      setTopupCardCvv("");
+      await loadWallets();
+    } catch (e) {
+      setTopupError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setTopupBusy(false);
+    }
+  }
+
+  async function handleWithdraw() {
+    setWithdrawError(null);
+    setWithdrawOk(null);
+    setWithdrawPending(null);
+    if (!isPositiveAmount(withdrawAmount)) {
+      setWithdrawError("Enter a valid amount.");
+      return;
+    }
+    if (!ghsWallet) {
+      setWithdrawError("No GHS wallet found.");
+      return;
+    }
+    if (withdrawTab === "MOMO" && !withdrawPhone.trim()) {
+      setWithdrawError("Enter the withdrawal phone number.");
+      return;
+    }
+    if (withdrawTab === "CARD" && (!withdrawCardNumber.trim() || !withdrawCardName.trim() || !withdrawCardExpiry.trim())) {
+      setWithdrawError("Enter all card withdrawal details.");
+      return;
+    }
+
+    setWithdrawBusy(true);
+    try {
+      const res = withdrawTab === "MOMO"
+        ? await fetch("/api/withdraw/momo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletId: ghsWallet.id, amount: withdrawAmount, phone: withdrawPhone, network: withdrawNetwork }),
+        })
+        : await fetch("/api/withdraw/card", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletId: ghsWallet.id, amount: withdrawAmount, cardNumber: withdrawCardNumber, cardName: withdrawCardName, expiry: withdrawCardExpiry }),
+        });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Withdraw failed.");
+
+      if (data?.status === "PENDING") {
+        setWithdrawPending(data.message || "Withdrawal submitted and awaiting processing.");
+      } else {
+        setWithdrawOk(data?.message || "Withdrawal submitted.");
+      }
+      setWithdrawAmount("");
+      setWithdrawPhone("");
+      setWithdrawCardNumber("");
+      setWithdrawCardName("");
+      setWithdrawCardExpiry("");
+      await loadWallets();
+    } catch (e) {
+      setWithdrawError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setWithdrawBusy(false);
+    }
+  }
+
   async function handleSendMoney() {
     setSendError(null); setSendOk(null);
-    if (!sendRecipient.trim() || !sendAmount || Number(sendAmount) <= 0) {
-      setSendError("Enter recipient and a valid amount"); return;
+    if (!sendRecipient.trim() || !isPositiveAmount(sendAmount)) {
+      setSendError("Enter recipient and a valid amount."); return;
     }
     if (!ghsWallet) { setSendError("No GHS wallet found"); return; }
+    if (!sendConfirming) {
+      setSendConfirming(true);
+      return;
+    }
     setSendBusy(true);
     try {
       const res = await fetch("/api/transactions", {
@@ -181,9 +484,35 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Transfer failed");
       setSendOk(`Sent GH₵ ${sendAmount} to ${sendRecipient}`);
-      setSendRecipient(""); setSendAmount("");
+      setSendRecipient(""); setSendAmount(""); setSendNote(""); setSendConfirming(false);
       await loadWallets();
     } catch (e) { setSendError(e instanceof Error ? e.message : "Transfer failed"); } finally { setSendBusy(false); }
+  }
+
+  async function copyReceiveDetail(label: string, value: string) {
+    setReceiveCopyOk(null);
+    if (!value || value === "-") return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setReceiveCopyOk(`${label} copied.`);
+    } catch {
+      setReceiveCopyOk("Copy failed. Please copy the detail manually.");
+    }
+  }
+
+  function handleQrPayPlaceholder() {
+    setQrError(null);
+    setQrOk(null);
+    if (!qrMerchant.trim()) {
+      setQrError("Enter a merchant ID or scanned code to continue.");
+      return;
+    }
+    setQrBusy(true);
+    // TODO: Connect this action to the QR Pay backend when the API is available.
+    window.setTimeout(() => {
+      setQrBusy(false);
+      setQrError("QR Pay processing is not connected yet. No payment was submitted.");
+    }, 250);
   }
 
   return (
@@ -249,46 +578,62 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
             </div>
           </div>
 
-          {/* Three mini‑wallets */}
-          <div className="col-span-12 lg:col-span-7 flex flex-col sm:flex-row gap-4 self-start lg:h-40">
-            {/* Crypto */}
-            <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 flex flex-col items-start justify-between">
-              <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-2xl">₿</div>
-              <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">Crypto Wallet</div>
-                {(() => {
-                  const cryptoWallets = wallets.filter(w => w.type === "CRYPTO" && w.code !== "GHS");
-                  const totalCryptoValue = cryptoWallets.reduce((sum, w) => sum + toBigIntSafe(w.balance), 0n);
-                  return (
-                    <>
-                      <div className="text-lg font-bold text-white mt-1">{formatFiatFromMinorUnits(totalCryptoValue.toString(), "GH₵")}</div>
-                      <div className="text-xs text-slate-400">≈ ${(Number(totalCryptoValue) / 100 / USD_GHS_RATE).toFixed(2)} USD</div>
-                    </>
-                  );
-                })()}
-              </div>
+          {/* Three mini-wallets */}
+<div className="col-span-12 lg:col-span-7 flex flex-col sm:flex-row gap-4 self-start lg:h-40">
+  {/* Crypto */}
+  <button
+    type="button"
+    onClick={() => router.push("/app/crypto")}
+    className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 flex flex-col items-start justify-between text-left hover:border-emerald-500/40 hover:bg-slate-900/50 transition-all"
+  >
+    <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-2xl">₿</div>
+    <div>
+      <div className="text-xs text-slate-400 uppercase tracking-wider">Crypto Wallet</div>
+      {(() => {
+        const cryptoWallets = wallets.filter(w => w.type === "CRYPTO" && w.code !== "GHS");
+        const totalCryptoValue = cryptoWallets.reduce((sum, w) => sum + Number(w.balance || "0") / 100_000_000, 0);
+        return (
+          <>
+            <div className="text-lg font-bold text-white mt-1">
+              {totalCryptoValue.toLocaleString(undefined, { maximumFractionDigits: 8 })}
             </div>
+            <div className="text-xs text-slate-400">
+              {cryptoWallets.length} crypto assets
+            </div>
+          </>
+        );
+      })()}
+    </div>
+  </button>
 
-            {/* Card */}
-            <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 flex flex-col items-start justify-between">
-              <div className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl">💳</div>
-              <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">Card Wallet</div>
-                <div className="text-lg font-bold text-white mt-1">Coming Soon</div>
-                <div className="text-xs text-slate-400">Physical & virtual cards</div>
-              </div>
-            </div>
+  {/* Card */}
+  <button
+    type="button"
+    onClick={() => router.push("/app/cards")}
+    className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 flex flex-col items-start justify-between text-left hover:border-purple-500/40 hover:bg-slate-900/50 transition-all"
+  >
+    <div className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl">💳</div>
+    <div>
+      <div className="text-xs text-slate-400 uppercase tracking-wider">Card Wallet</div>
+      <div className="text-lg font-bold text-white mt-1">Coming Soon</div>
+      <div className="text-xs text-slate-400">Physical & virtual cards</div>
+    </div>
+  </button>
 
-            {/* KASH Points */}
-            <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 flex flex-col items-start justify-between">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl">⭐</div>
-              <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">KASH Points</div>
-                <div className="text-lg font-bold text-white mt-1">2,450 PTS</div>
-                <div className="text-xs text-slate-400">Earn more by referring friends</div>
-              </div>
-            </div>
-          </div>
+  {/* KASH Points */}
+  <button
+    type="button"
+    onClick={() => router.push("/app/referrals")}
+    className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 flex flex-col items-start justify-between text-left hover:border-emerald-500/40 hover:bg-slate-900/50 transition-all"
+  >
+    <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl">⭐</div>
+    <div>
+      <div className="text-xs text-slate-400 uppercase tracking-wider">KASH Points</div>
+      <div className="text-lg font-bold text-white mt-1">{kashPoints.toLocaleString()} PTS</div>
+      <div className="text-xs text-slate-400">Earn more by referring friends</div>
+    </div>
+  </button>
+</div>
 
           {/* Quick Actions */}
           <div className="col-span-12 lg:col-span-8 rounded-2xl border border-slate-800 bg-slate-900/30 backdrop-blur-sm p-5 self-start mt-0">
@@ -310,7 +655,7 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
                 <svg className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 mb-1 sm:mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
-                <span className="text-[11px] sm:text-xs font-medium text-white">Pay Merchant</span>
+                <span className="text-[11px] sm:text-xs font-medium text-white">QR Pay</span>
               </button>
             </div>
           </div>
@@ -438,8 +783,312 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
         </div>
       </div>
 
-      {/* SEND MONEY MODAL */}
+      {/* REBUILT DASHBOARD MODALS */}
       {sendMoneyOpen && (
+        <ModalShell
+          icon="SEND"
+          title="Send Money"
+          subtitle="Move money instantly from your GHS wallet to another Kashboy account."
+          maxWidth="max-w-lg"
+          onClose={() => { setSendMoneyOpen(false); setSendConfirming(false); }}
+        >
+          <div className="space-y-4">
+            <ModalField label="Recipient">
+              <ModalInput
+                placeholder="Username, email, or phone"
+                value={sendRecipient}
+                onChange={(e) => { setSendRecipient(e.target.value); setSendConfirming(false); }}
+              />
+            </ModalField>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ModalField label="Amount">
+                <ModalInput
+                  placeholder="0.00"
+                  type="number"
+                  min="1"
+                  value={sendAmount}
+                  onChange={(e) => { setSendAmount(e.target.value); setSendConfirming(false); }}
+                />
+              </ModalField>
+              <ModalField label="Reference">
+                <ModalInput
+                  placeholder="Optional note"
+                  value={sendNote}
+                  onChange={(e) => { setSendNote(e.target.value); setSendConfirming(false); }}
+                />
+              </ModalField>
+            </div>
+            <SummaryBox>
+              <SummaryRow label="From" value="GHS Wallet" />
+              <SummaryRow label="Recipient" value={sendRecipient.trim() || "-"} />
+              <SummaryRow label="Amount" value={amountPreview(sendAmount)} />
+              <SummaryRow label="Reference" value={sendNote.trim() || "None"} />
+            </SummaryBox>
+            {sendConfirming && <StatusNotice kind="info">Review the transfer details, then confirm to send.</StatusNotice>}
+            {sendError && <StatusNotice kind="error">{sendError}</StatusNotice>}
+            {sendOk && <StatusNotice kind="success">{sendOk}</StatusNotice>}
+            <div className="flex gap-3">
+              {sendConfirming && (
+                <button
+                  type="button"
+                  onClick={() => setSendConfirming(false)}
+                  className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-4 py-3 text-sm font-semibold text-slate-200 transition-colors hover:border-slate-500"
+                >
+                  Back
+                </button>
+              )}
+              <PrimaryModalButton
+                loading={sendBusy}
+                loadingLabel="Sending..."
+                disabled={!sendRecipient.trim() || !isPositiveAmount(sendAmount)}
+                onClick={handleSendMoney}
+              >
+                {sendConfirming ? "Confirm and Send" : "Review Transfer"}
+              </PrimaryModalButton>
+            </div>
+          </div>
+        </ModalShell>
+      )}
+
+      {receiveMoneyOpen && (
+        <ModalShell
+          icon="RCV"
+          title="Receive Money"
+          subtitle="Share your Kashboy details so another user can send money to you."
+          maxWidth="max-w-lg"
+          onClose={() => setReceiveMoneyOpen(false)}
+        >
+          <div className="space-y-4">
+            <div className="flex h-44 items-center justify-center rounded-3xl border border-slate-700/70 bg-slate-950/45">
+              <div className="grid h-28 w-28 grid-cols-4 grid-rows-4 gap-1 rounded-2xl border border-emerald-400/30 bg-white p-3">
+                {Array.from({ length: 16 }).map((_, index) => (
+                  <span
+                    key={index}
+                    className={`rounded-sm ${[0, 1, 4, 5, 10, 11, 14, 15].includes(index) ? "bg-slate-950" : "bg-emerald-500/70"}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: "Username", value: meUser?.username || "-" },
+                { label: "Email", value: meUser?.email || "-" },
+                { label: "Phone", value: meUser?.phone || "-" },
+                { label: "GHS Wallet", value: ghsWallet?.id || "-" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700/70 bg-slate-950/35 px-4 py-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
+                    <div className="mt-1 break-all text-sm font-semibold text-white">{item.value}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyReceiveDetail(item.label, item.value)}
+                    disabled={item.value === "-"}
+                    className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:border-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Copy
+                  </button>
+                </div>
+              ))}
+            </div>
+            <StatusNotice kind="info">Ask the sender to use your username, email, phone, or wallet reference.</StatusNotice>
+            {receiveCopyOk && <StatusNotice kind={receiveCopyOk.startsWith("Copy failed") ? "error" : "success"}>{receiveCopyOk}</StatusNotice>}
+          </div>
+        </ModalShell>
+      )}
+
+      {payMerchantOpen && (
+        <ModalShell
+          icon="QR"
+          title="QR Pay"
+          subtitle="Display your payment QR or enter a merchant reference when scanner support is ready."
+          maxWidth="max-w-lg"
+          onClose={() => setPayMerchantOpen(false)}
+        >
+          <div className="space-y-4">
+            <div className="rounded-3xl border border-slate-700/70 bg-slate-950/40 p-4">
+              <div className="flex h-52 items-center justify-center rounded-2xl bg-white">
+                <div className="grid h-32 w-32 grid-cols-5 grid-rows-5 gap-1 rounded-xl bg-white p-2">
+                  {Array.from({ length: 25 }).map((_, index) => (
+                    <span
+                      key={index}
+                      className={`rounded-sm ${[0, 1, 5, 6, 12, 18, 19, 23, 24].includes(index) ? "bg-black" : "bg-emerald-500"}`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Kashboy QR</div>
+            </div>
+            <ModalField label="Merchant ID or scanned code">
+              <ModalInput
+                placeholder="Enter merchant ID"
+                value={qrMerchant}
+                onChange={(e) => { setQrMerchant(e.target.value); setQrError(null); setQrOk(null); }}
+              />
+            </ModalField>
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-4">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Supported Methods</div>
+              <div className="flex flex-wrap gap-2">
+                {["Wallet balance", "Merchant QR", "Scan to pay"].map((method) => (
+                  <span key={method} className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-100">
+                    {method}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <StatusNotice kind="info">QR Pay status: scanner and merchant processing are pending backend connection.</StatusNotice>
+            {qrError && <StatusNotice kind="error">{qrError}</StatusNotice>}
+            {qrOk && <StatusNotice kind="success">{qrOk}</StatusNotice>}
+            <PrimaryModalButton
+              loading={qrBusy}
+              loadingLabel="Checking..."
+              onClick={handleQrPayPlaceholder}
+            >
+              Continue QR Pay
+            </PrimaryModalButton>
+          </div>
+        </ModalShell>
+      )}
+
+      {topupOpen && (
+        <ModalShell
+          icon="FUND"
+          title="Fund Wallet"
+          subtitle="Add money to your GHS wallet with Mobile Money or card."
+          maxWidth="max-w-2xl"
+          onClose={() => setTopupOpen(false)}
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 rounded-3xl border border-slate-700/70 bg-slate-950/30 p-1.5">
+              <SegmentButton active={fundMethod === "MOMO"} onClick={() => { setFundMethod("MOMO"); setTopupError(null); }}>Mobile Money</SegmentButton>
+              <SegmentButton active={fundMethod === "CARD"} onClick={() => { setFundMethod("CARD"); setTopupError(null); }}>Visa / Card</SegmentButton>
+            </div>
+            {fundMethod === "MOMO" ? (
+              <div className="space-y-4">
+                <ModalField label="Network">
+                  <NetworkSelector value={topupNetwork} onChange={setTopupNetwork} />
+                </ModalField>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ModalField label="Phone number">
+                    <ModalInput placeholder="+233 24 000 0000" value={topupPhone} onChange={(e) => setTopupPhone(e.target.value)} />
+                  </ModalField>
+                  <ModalField label="Amount">
+                    <ModalInput placeholder="0.00" type="number" min="1" value={topupAmount} onChange={(e) => setTopupAmount(e.target.value)} />
+                  </ModalField>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <ModalField label="Card number">
+                  <ModalInput className="tracking-wider" placeholder="1234 5678 9012 3456" maxLength={19} value={topupCardNumber} onChange={(e) => setTopupCardNumber(e.target.value)} />
+                </ModalField>
+                <ModalField label="Cardholder name">
+                  <ModalInput placeholder="Name on card" value={topupCardName} onChange={(e) => setTopupCardName(e.target.value)} />
+                </ModalField>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <ModalField label="Expiry">
+                    <ModalInput placeholder="MM/YY" maxLength={5} value={topupCardExpiry} onChange={(e) => setTopupCardExpiry(e.target.value)} />
+                  </ModalField>
+                  <ModalField label="CVV">
+                    <ModalInput placeholder="123" maxLength={4} type="password" value={topupCardCvv} onChange={(e) => setTopupCardCvv(e.target.value)} />
+                  </ModalField>
+                  <ModalField label="Amount">
+                    <ModalInput placeholder="0.00" type="number" min="1" value={topupAmount} onChange={(e) => setTopupAmount(e.target.value)} />
+                  </ModalField>
+                </div>
+              </div>
+            )}
+            <SummaryBox>
+              <SummaryRow label="Destination" value="GHS Wallet" />
+              <SummaryRow label="Method" value={fundMethod === "MOMO" ? `${topupNetwork} Mobile Money` : "Visa / Card"} />
+              <SummaryRow label="Amount" value={amountPreview(topupAmount)} />
+              <SummaryRow label="Current balance" value={ghsWallet ? formatFiatFromMinorUnits(ghsWallet.balance, "GHS") : "Unavailable"} />
+            </SummaryBox>
+            {topupError && <StatusNotice kind="error">{topupError}</StatusNotice>}
+            {topupOk && <StatusNotice kind="success">{topupOk}</StatusNotice>}
+            {topupPending && <StatusNotice kind="info">{topupPending}</StatusNotice>}
+            <PrimaryModalButton
+              loading={topupBusy}
+              loadingLabel="Processing..."
+              disabled={!isPositiveAmount(topupAmount) || !ghsWallet || (fundMethod === "MOMO" ? !topupPhone.trim() : !topupCardNumber.trim() || !topupCardName.trim() || !topupCardExpiry.trim() || !topupCardCvv.trim())}
+              onClick={handleTopup}
+            >
+              Fund Wallet
+            </PrimaryModalButton>
+          </div>
+        </ModalShell>
+      )}
+
+      {withdrawOpen && (
+        <ModalShell
+          icon="OUT"
+          title="Withdraw"
+          subtitle="Withdraw from your GHS wallet to Mobile Money or card."
+          maxWidth="max-w-2xl"
+          onClose={() => setWithdrawOpen(false)}
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 rounded-3xl border border-slate-700/70 bg-slate-950/30 p-1.5">
+              <SegmentButton active={withdrawTab === "MOMO"} onClick={() => { setWithdrawTab("MOMO"); setWithdrawError(null); }}>Mobile Money</SegmentButton>
+              <SegmentButton active={withdrawTab === "CARD"} onClick={() => { setWithdrawTab("CARD"); setWithdrawError(null); }}>Visa / Card</SegmentButton>
+            </div>
+            {withdrawTab === "MOMO" ? (
+              <div className="space-y-4">
+                <ModalField label="Network">
+                  <NetworkSelector value={withdrawNetwork} onChange={setWithdrawNetwork} />
+                </ModalField>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ModalField label="Phone or account">
+                    <ModalInput placeholder="+233 24 000 0000" value={withdrawPhone} onChange={(e) => setWithdrawPhone(e.target.value)} />
+                  </ModalField>
+                  <ModalField label="Amount">
+                    <ModalInput placeholder="0.00" type="number" min="1" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                  </ModalField>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <ModalField label="Card number">
+                  <ModalInput className="tracking-wider" placeholder="1234 5678 9012 3456" maxLength={19} value={withdrawCardNumber} onChange={(e) => setWithdrawCardNumber(e.target.value)} />
+                </ModalField>
+                <ModalField label="Cardholder name">
+                  <ModalInput placeholder="Name on card" value={withdrawCardName} onChange={(e) => setWithdrawCardName(e.target.value)} />
+                </ModalField>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ModalField label="Expiry">
+                    <ModalInput placeholder="MM/YY" maxLength={5} value={withdrawCardExpiry} onChange={(e) => setWithdrawCardExpiry(e.target.value)} />
+                  </ModalField>
+                  <ModalField label="Amount">
+                    <ModalInput placeholder="0.00" type="number" min="1" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                  </ModalField>
+                </div>
+              </div>
+            )}
+            <SummaryBox>
+              <SummaryRow label="Source" value="GHS Wallet" />
+              <SummaryRow label="Destination" value={withdrawTab === "MOMO" ? `${withdrawNetwork} Mobile Money` : "Visa / Card"} />
+              <SummaryRow label="Amount" value={amountPreview(withdrawAmount)} />
+              <SummaryRow label="Fees" value="Calculated at processing" />
+              <SummaryRow label="Available" value={ghsWallet ? formatFiatFromMinorUnits(ghsWallet.balance, "GHS") : "Unavailable"} />
+            </SummaryBox>
+            {withdrawError && <StatusNotice kind="error">{withdrawError}</StatusNotice>}
+            {withdrawOk && <StatusNotice kind="success">{withdrawOk}</StatusNotice>}
+            {withdrawPending && <StatusNotice kind="info">{withdrawPending}</StatusNotice>}
+            <PrimaryModalButton
+              loading={withdrawBusy}
+              loadingLabel="Submitting..."
+              disabled={!isPositiveAmount(withdrawAmount) || !ghsWallet || (withdrawTab === "MOMO" ? !withdrawPhone.trim() : !withdrawCardNumber.trim() || !withdrawCardName.trim() || !withdrawCardExpiry.trim())}
+              onClick={handleWithdraw}
+            >
+              Withdraw
+            </PrimaryModalButton>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* LEGACY SEND MONEY MODAL */}
+      {false && sendMoneyOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setSendMoneyOpen(false)} />
           <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl">
@@ -460,8 +1109,8 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
         </div>
       )}
 
-      {/* RECEIVE MONEY MODAL */}
-      {receiveMoneyOpen && (
+      {/* LEGACY RECEIVE MONEY MODAL */}
+      {false && receiveMoneyOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setReceiveMoneyOpen(false)} />
           <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl">
@@ -476,7 +1125,16 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
                 return (
                   <div key={label} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-4 py-3">
                     <span className="text-sm text-slate-300">{label}</span>
-                    <span className="text-sm font-medium text-white">{val}</span>
+                    <span className="flex items-center gap-3 text-sm font-medium text-white">
+                      {val}
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(String(val))}
+                        className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:border-emerald-500"
+                      >
+                        Copy
+                      </button>
+                    </span>
                   </div>
                 );
               })}
@@ -485,24 +1143,27 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
         </div>
       )}
 
-      {/* PAY MERCHANT MODAL */}
-      {payMerchantOpen && (
+      {/* LEGACY QR PAY MODAL */}
+      {false && payMerchantOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setPayMerchantOpen(false)} />
           <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl">
             <div className="flex items-start justify-between mb-4">
-              <div className="text-lg font-semibold text-white">Pay Merchant</div>
+              <div className="text-lg font-semibold text-white">QR Pay</div>
               <button onClick={() => setPayMerchantOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <div className="mb-4 flex h-48 items-center justify-center rounded-2xl border border-slate-800 bg-white text-sm font-bold text-black">
+              QR CODE
             </div>
             <input className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 mb-4" placeholder="Enter Merchant ID or scan QR" />
             <button className="w-full rounded-lg bg-emerald-500 py-3 text-sm font-semibold text-black hover:bg-emerald-600">Pay</button>
-            <p className="text-xs text-slate-500 mt-2 text-center">QR scanner coming soon</p>
+            <p className="text-xs text-slate-500 mt-2 text-center">Scanner integration placeholder</p>
           </div>
         </div>
       )}
 
-      {/* TOPUP MODAL */}
-      {topupOpen && (
+      {/* LEGACY TOPUP MODAL */}
+      {false && topupOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setTopupOpen(false)} />
           <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -559,8 +1220,8 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
         </div>
       )}
 
-      {/* WITHDRAW MODAL */}
-      {withdrawOpen && ghsWallet && (
+      {/* LEGACY WITHDRAW MODAL */}
+      {false && withdrawOpen && ghsWallet && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setWithdrawOpen(false)} />
           <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-800 bg-[#070B1A] p-6 shadow-2xl">
@@ -594,8 +1255,8 @@ const [meUser, setMeUser] = useState<{ username?: string; email?: string; phone?
                   setWithdrawBusy(true);
                   try {
                     const res = withdrawTab==="MOMO"
-                      ? await fetch("/api/withdraw/momo", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ walletId: ghsWallet.id, amount: withdrawAmount, phone: withdrawPhone, network: withdrawNetwork }) })
-                      : await fetch("/api/withdraw/card", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ walletId: ghsWallet.id, amount: withdrawAmount, cardNumber:withdrawCardNumber, cardName:withdrawCardName, expiry:withdrawCardExpiry }) });
+                      ? await fetch("/api/withdraw/momo", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ walletId: ghsWallet?.id || "", amount: withdrawAmount, phone: withdrawPhone, network: withdrawNetwork }) })
+                      : await fetch("/api/withdraw/card", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ walletId: ghsWallet?.id || "", amount: withdrawAmount, cardNumber:withdrawCardNumber, cardName:withdrawCardName, expiry:withdrawCardExpiry }) });
                     const data = await res.json();
                     if(!res.ok) { setWithdrawError(data?.error||"Withdraw failed."); return; }
                     setWithdrawOk(data.message || "Withdrawal submitted.");
