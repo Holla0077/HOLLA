@@ -5,7 +5,7 @@ import { AppError } from '@/src/shared/errors/app-errors';
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await AuthService.getSessionUser();
+    const user = await AuthService.getSessionUser(req);
     if (!user) throw new AppError('Unauthorized', 401);
 
     const { searchParams } = new URL(req.url);
@@ -13,13 +13,22 @@ export async function GET(req: NextRequest) {
     if (!ref) throw new AppError('ref parameter required', 400);
 
     const result = await CollectionService.checkAndCompleteTopUp(ref, user.id);
+    const reason = 'reason' in result ? result.reason : undefined;
+    const transactionId = 'transactionId' in result ? result.transactionId : undefined;
+    const alreadyProcessed = 'alreadyProcessed' in result ? result.alreadyProcessed : false;
     const message = result.status === 'COMPLETED'
       ? 'Top-up completed successfully.'
       : result.status === 'FAILED'
-        ? `Payment failed: ${result.reason || 'Declined'}`
+        ? `Payment failed: ${reason || 'Declined'}`
         : 'Waiting for approval...';
 
-    return NextResponse.json({ status: result.status, message });
+    return NextResponse.json({
+      status: result.status,
+      message,
+      referenceId: ref,
+      transactionId,
+      alreadyProcessed,
+    });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });

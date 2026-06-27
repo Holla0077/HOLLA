@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import HollaLogo from "@/public/brand/components/HollaLogo";
 
 const navItems = ["Personal", "Business", "Crypto", "Cards", "Company", "Help"];
@@ -16,25 +17,41 @@ const featureCards = [
     id: "personal",
     title: "Personal Wallet",
     desc: "Send and receive money instantly with anyone, anywhere.",
-    visual: "wallet",
+    image: {
+      src: "/brand/landing-personal-wallet.png",
+      alt: "Personal wallet feature",
+      position: "58% 62%",
+    },
   },
   {
     id: "crypto",
     title: "Crypto Trading",
     desc: "Buy, sell and hold BTC and other top cryptocurrencies.",
-    visual: "crypto",
+    image: {
+      src: "/brand/landing-crypto-trading.png",
+      alt: "Crypto trading feature",
+      position: "60% 62%",
+    },
   },
   {
     id: "cards",
     title: "KASHBOY Cards",
     desc: "Spend with purpose with our NGHT, GO EAT and BTC cards.",
-    visual: "card",
+    image: {
+      src: "/brand/landing-kashboy-cards.png",
+      alt: "KASHBOY cards feature",
+      position: "58% 62%",
+    },
   },
   {
     id: "business",
     title: "Business Payments",
     desc: "Accept payments, manage invoices and grow your business.",
-    visual: "business",
+    image: {
+      src: "/brand/landing-business-payments.png",
+      alt: "Business payments feature",
+      position: "58% 62%",
+    },
   },
 ];
 
@@ -81,164 +98,55 @@ function TrustIcon({ icon, accent }: { icon: string; accent: string }) {
   );
 }
 
-function MiniLineChart() {
+function HeroDevices() {
   return (
-    <svg viewBox="0 0 250 95" className="h-full w-full" aria-hidden="true">
-      <defs>
-        <linearGradient id="heroChartFill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#10f29b" stopOpacity="0.42" />
-          <stop offset="100%" stopColor="#10f29b" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M8 75 C 25 66, 38 63, 53 52 C 69 41, 82 52, 98 45 C 113 39, 123 25, 139 32 C 154 39, 163 54, 179 43 C 197 31, 210 18, 240 12"
-        fill="none"
-        stroke="#10f29b"
-        strokeLinecap="round"
-        strokeWidth="4"
-      />
-      <path
-        d="M8 75 C 25 66, 38 63, 53 52 C 69 41, 82 52, 98 45 C 113 39, 123 25, 139 32 C 154 39, 163 54, 179 43 C 197 31, 210 18, 240 12 L 240 95 L 8 95 Z"
-        fill="url(#heroChartFill)"
-      />
-    </svg>
-  );
-}
+    <div className="relative mx-auto w-full max-w-[820px]">
+      <div className="absolute -inset-10 rounded-[44px] bg-emerald-500/10 blur-3xl" />
+      <div className="absolute -inset-6 rounded-[38px] bg-[#070B1A]/85 blur-2xl" />
+      <div className="absolute inset-x-12 bottom-4 h-24 rounded-full bg-black/45 blur-2xl" />
 
-function PhoneMockup() {
-  return (
-    <div className="absolute bottom-2 left-0 z-20 h-[242px] w-[138px] rotate-[-1deg] rounded-[24px] border border-white/35 bg-[#050b12] p-2 shadow-[0_28px_70px_rgba(0,0,0,0.65)] sm:left-8 lg:bottom-6">
-      <div className="h-full overflow-hidden rounded-[18px] border border-emerald-400/10 bg-[#07121c] p-3">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="h-2 w-14 rounded-full bg-emerald-400" />
-          <div className="h-4 w-4 rounded-full bg-emerald-400/30" />
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-          <p className="text-[8px] font-semibold text-slate-400">Total Balance</p>
-          <div className="mt-1 h-3 w-20 rounded bg-white/75" />
-          <div className="mt-2 h-2 w-14 rounded bg-emerald-400/80" />
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {[
-            ["B", "Bitcoin"],
-            ["E", "Ethereum"],
-            ["U", "USDT"],
-          ].map(([short, name]) => (
-            <div key={name} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/15 text-[10px] font-bold text-emerald-300">
-                  {short}
-                </span>
-                <div>
-                  <div className="h-2 w-10 rounded bg-white/30" />
-                  <div className="mt-1 h-1.5 w-7 rounded bg-white/10" />
-                </div>
-              </div>
-              <div className="h-2 w-6 rounded bg-emerald-300/70" />
-            </div>
-          ))}
-        </div>
+      <div
+        className="relative aspect-[16/10] overflow-hidden rounded-[28px]"
+        style={{
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent 0%, black 8%, black 94%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 7%, black 88%, transparent 100%)",
+          WebkitMaskComposite: "source-in",
+          maskImage:
+            "linear-gradient(to right, transparent 0%, black 8%, black 94%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 7%, black 88%, transparent 100%)",
+          maskComposite: "intersect",
+        }}
+      >
+        <Image
+          src="/brand/Image%20Jun%2025.png"
+          alt="Kashboy web dashboard and mobile app"
+          fill
+          priority
+          sizes="(max-width: 768px) 92vw, 58vw"
+          className="object-contain drop-shadow-[0_32px_55px_rgba(0,0,0,0.45)]"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_74%_16%,rgba(16,185,129,0.16),transparent_32%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#070B1A]/55 via-transparent to-[#070B1A]/28" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#070B1A]/28 via-transparent to-[#070B1A]/62" />
       </div>
     </div>
   );
 }
 
-function LaptopMockup() {
+function FeatureVisual({ image }: { image: { src: string; alt: string; position: string } }) {
   return (
-    <div className="relative mx-auto h-[300px] w-full max-w-[640px]">
-      <div className="absolute inset-x-8 bottom-6 h-28 rounded-full bg-emerald-400/10 blur-3xl" />
-      <div className="absolute right-4 top-0 h-[250px] w-[470px] max-w-[82vw] rotate-[-5deg] rounded-[20px] border border-white/35 bg-[#080d17] p-3 shadow-[0_30px_90px_rgba(0,0,0,0.7)]">
-        <div className="flex h-full overflow-hidden rounded-[14px] border border-white/10 bg-[#07111b]">
-          <aside className="w-20 border-r border-white/10 bg-black/25 p-3">
-            <div className="mb-5 h-2 w-10 rounded-full bg-emerald-400" />
-            {["Dashboard", "Wallet", "Cards", "Crypto", "More"].map((item, index) => (
-              <div key={item} className="mb-4 flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${index === 0 ? "bg-emerald-400" : "bg-white/15"}`} />
-                <span className="h-2 flex-1 rounded bg-white/10" />
-              </div>
-            ))}
-          </aside>
-
-          <div className="flex-1 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <div className="h-3 w-28 rounded bg-white/75" />
-                <div className="mt-2 h-2 w-20 rounded bg-white/15" />
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-6 w-6 rounded-full bg-emerald-400/20" />
-                <div className="h-6 w-16 rounded-full bg-white/10" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-3">
-              <div className="row-span-2 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] p-4">
-                <div className="mb-2 h-2 w-16 rounded bg-white/20" />
-                <div className="h-4 w-24 rounded bg-white/70" />
-                <div className="mt-3 h-24">
-                  <MiniLineChart />
-                </div>
-              </div>
-              {["GHS", "Crypto", "Cards", "Rewards"].map((item, index) => (
-                <div key={item} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                  <div className="mb-3 h-2 w-12 rounded bg-white/20" />
-                  <div className={`h-3 rounded ${index === 3 ? "w-16 bg-emerald-300/80" : "w-20 bg-white/65"}`} />
-                  <div className="mt-3 h-2 w-10 rounded bg-emerald-400/40" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="absolute bottom-0 right-2 h-8 w-[500px] max-w-[86vw] rotate-[-5deg] rounded-b-[32px] bg-gradient-to-r from-slate-900 via-slate-300 to-slate-800 shadow-[0_18px_50px_rgba(0,0,0,0.6)]" />
-      <PhoneMockup />
-    </div>
-  );
-}
-
-function FeatureVisual({ type }: { type: string }) {
-  if (type === "crypto") {
-    return (
-      <div className="absolute -bottom-8 right-3 h-36 w-36 rounded-full border border-emerald-200/30 bg-gradient-to-br from-emerald-300/50 via-emerald-700/50 to-emerald-950 shadow-[0_0_45px_rgba(16,185,129,0.28)]">
-        <div className="absolute inset-4 rounded-full border border-emerald-100/30" />
-        <span className="absolute inset-0 flex items-center justify-center text-6xl font-black text-emerald-100">B</span>
-      </div>
-    );
-  }
-
-  if (type === "card") {
-    return (
-      <div className="absolute -bottom-4 right-2 h-28 w-44 rotate-[-15deg] rounded-2xl border border-emerald-200/35 bg-gradient-to-br from-emerald-400/35 via-emerald-800 to-[#06101a] p-4 shadow-[0_0_45px_rgba(16,185,129,0.22)]">
-        <div className="h-7 w-9 rounded-md border border-emerald-100/40 bg-emerald-100/10" />
-        <div className="mt-8 h-2 w-24 rounded bg-white/25" />
-        <div className="mt-3 flex justify-between">
-          <div className="h-2 w-12 rounded bg-white/20" />
-          <div className="h-5 w-9 rounded-full border border-emerald-100/35" />
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "business") {
-    return (
-      <div className="absolute -bottom-2 right-1 h-40 w-40">
-        <div className="absolute bottom-0 right-5 h-32 w-28 rounded-t-3xl border border-emerald-200/35 bg-gradient-to-b from-emerald-300/45 to-emerald-950 shadow-[0_0_45px_rgba(16,185,129,0.26)]" />
-        <div className="absolute bottom-6 right-12 h-16 w-12 rounded-t-xl bg-[#06101a] ring-1 ring-emerald-200/30" />
-        <div className="absolute bottom-24 right-16 h-3 w-3 rounded-full bg-emerald-100" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="absolute -bottom-8 right-8 h-36 w-24 rotate-[-14deg] rounded-2xl border border-emerald-200/35 bg-gradient-to-br from-emerald-400/35 to-[#06101a] p-4 shadow-[0_0_40px_rgba(16,185,129,0.22)]">
-      <div className="h-7 w-7 rounded-lg bg-emerald-100/20 ring-1 ring-emerald-100/40" />
-      <div className="mt-12 h-2 w-12 rounded bg-white/20" />
-      <div className="mt-2 h-2 w-9 rounded bg-emerald-200/50" />
-      <div className="absolute right-[-28px] top-12 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200/25 bg-emerald-400/20 text-lg font-black text-emerald-100">
-        A
-      </div>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <Image
+        src={image.src}
+        alt={image.alt}
+        fill
+        sizes="(max-width: 768px) 92vw, (max-width: 1280px) 45vw, 25vw"
+        className="object-cover opacity-90 transition-transform duration-500 group-hover:scale-[1.04]"
+        style={{ objectPosition: image.position }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#070B1A]/90 via-[#070B1A]/50 to-[#070B1A]/10" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#070B1A]/40 via-transparent to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-emerald-400/20 via-emerald-400/[0.04] to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_78%,rgba(16,185,129,0.18),transparent_42%)]" />
     </div>
   );
 }
@@ -309,7 +217,7 @@ export default function LandingPage() {
 
           <div className="relative">
             <div className="absolute right-6 top-0 hidden h-24 w-24 rounded-full border border-emerald-400/15 lg:block" />
-            <LaptopMockup />
+            <HeroDevices />
           </div>
         </section>
 
@@ -327,32 +235,33 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="products" className="relative z-10 mx-auto max-w-[1500px] px-5 py-12 lg:px-10">
+        <section id="products" className="relative z-10 mx-auto max-w-[1500px] px-5 py-10 lg:px-10">
           <div className="text-center">
-            <h2 className="text-3xl font-black leading-tight tracking-normal text-white sm:text-4xl">
+            <h2 className="text-3xl font-black leading-[1.12] tracking-normal text-white sm:text-[34px]">
               Everything You Need
               <br />
               In <span className="text-emerald-400">One Platform</span>
             </h2>
           </div>
 
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {featureCards.map((card) => (
               <article
                 key={card.title}
                 id={card.id}
-                className="group relative min-h-[300px] overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.18)] transition-colors hover:border-emerald-300/35 hover:bg-emerald-500/[0.04]"
+                className="group relative min-h-[258px] overflow-hidden rounded-[18px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,23,42,0.48),rgba(2,8,18,0.72))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_55px_rgba(0,0,0,0.22)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_24px_70px_rgba(0,0,0,0.3),0_0_42px_rgba(16,185,129,0.12)]"
               >
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-emerald-400/18 to-transparent" />
-                <h3 className="text-2xl font-black tracking-normal text-white">{card.title}</h3>
-                <p className="mt-6 max-w-[220px] text-sm leading-7 text-slate-300">{card.desc}</p>
-                <a
-                  href={`#${card.id}`}
-                  className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-emerald-400 transition-colors group-hover:text-emerald-300"
-                >
-                  Explore <span aria-hidden="true">-&gt;</span>
-                </a>
-                <FeatureVisual type={card.visual} />
+                <div className="relative z-10">
+                  <h3 className="text-xl font-black tracking-normal text-white">{card.title}</h3>
+                  <p className="mt-4 max-w-[215px] text-[13px] leading-6 text-slate-300">{card.desc}</p>
+                  <a
+                    href={`#${card.id}`}
+                    className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-emerald-400 transition-colors group-hover:text-emerald-300"
+                  >
+                    Explore <span aria-hidden="true">&rarr;</span>
+                  </a>
+                </div>
+                <FeatureVisual image={card.image} />
               </article>
             ))}
           </div>
